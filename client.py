@@ -1,4 +1,5 @@
 import socket
+import data
 
 def parseHeader(head):
     length = head[0] << 24 | head[1] << 16 | head[2] << 8 | head[3]
@@ -14,9 +15,9 @@ def main():
 
     head = sock.recv(4)
     length, hasFd = parseHeader(head)
-    print(length, hasFd)
 
     payload = sock.recv(length)
+    payload = data.Decode(str(payload, 'utf-8'))
     print(payload)
 
 main()
