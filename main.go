@@ -1,34 +1,32 @@
 package main
 
 import (
-    "github.com/docker/libchan/data"
-    "github.com/docker/libchan/unix"
     "log"
     "net"
 )
 
+var sched *Sched
 
-func main() {
-    listen, err := net.Listen("unix", "libchan.sock")
-    if err != nil {
-        log.Fatal(err)
-    }
 
+func handleAccept(listen net.Listener) {
     defer listen.Close()
-
     for {
-        fd, err := listen.Accept()
+        conn, err := listen.Accept()
         if err != nil {
             log.Fatal(err)
         }
-
-        ufd := fd.(*net.UnixConn)
-        file, err := ufd.File()
-        fileConn, err := unix.FileConn(file)
-        fd.Close()
-        if err := fileConn.Send(data.Empty().Set("foo", "bar").Bytes(), nil); err != nil {
-            log.Fatal(err)
-        }
-        fileConn.Close()
+        sched.NewConnectioin(conn)
     }
+}
+
+
+func main() {
+    sched = NewSched()
+    sched.Start()
+    listen, err := net.Listen("unix", "libchan.sock")
+    log.Printf("Started at libchan.sock")
+    if err != nil {
+        log.Fatal(err)
+    }
+    handleAccept(listen)
 }
