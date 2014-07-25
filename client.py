@@ -19,32 +19,40 @@ def makeHeader(data):
     return bytes(''.join(header), 'utf-8')
 
 
+class Client(object):
+    def __init__(self, sock_file):
+        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.sock.connect(sock_file)
+
+
+    def recive(self):
+        head = self.sock.recv(4)
+        length, hasFd = parseHeader(head)
+
+        payload = self.sock.recv(length)
+        payload = data.Decode(str(payload, 'utf-8'))
+        return payload
+
+
+    def send(self, payload):
+        payload = bytes(payload, 'utf-8')
+        header = makeHeader(payload)
+        self.sock.send(header)
+        self.sock.send(payload)
+
+
 def main():
-    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    sock.connect("libchan.sock")
-
-    head = sock.recv(4)
-    length, hasFd = parseHeader(head)
-
-    payload = sock.recv(length)
-    print(payload)
-    payload = data.Decode(str(payload, 'utf-8'))
+    client = Client("libchan.sock")
+    payload = client.recive()
     if payload["type"][0] != "connection":
+        print("error on connection", payload)
         return
 
     payload = {"cmd": ["ask"]}
     payload = data.Encode(payload)
-    payload = bytes(payload, 'utf-8')
-    header = makeHeader(payload)
-    sock.send(header)
-    sock.send(payload)
+    client.send(payload)
 
-    head = sock.recv(4)
-    length, hasFd = parseHeader(head)
-
-    payload = sock.recv(length)
-    payload = data.Decode(str(payload, 'utf-8'))
-
+    payload = client.recive()
     print(payload)
     sleep(10)
 
