@@ -21,6 +21,7 @@ func handleAccept(listen net.Listener) {
 
 
 func main() {
+    Connect("127.0.0.1:6379")
     sched = NewSched()
     sched.Start()
     listen, err := net.Listen("unix", "libchan.sock")
