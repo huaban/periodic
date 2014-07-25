@@ -1,5 +1,5 @@
 import socket
-import data
+from . import data
 from time import sleep
 
 def parseHeader(head):
@@ -35,6 +35,7 @@ class Client(object):
 
 
     def send(self, payload):
+        payload = data.Encode(payload)
         payload = bytes(payload, 'utf-8')
         header = makeHeader(payload)
         self.sock.send(header)
@@ -49,11 +50,11 @@ def main():
         return
 
     payload = {"cmd": ["ask"]}
-    payload = data.Encode(payload)
     client.send(payload)
 
     payload = client.recive()
     print(payload)
     sleep(10)
 
-main()
+if __name__ == "__main__":
+    main()
