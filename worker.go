@@ -100,7 +100,6 @@ func (worker *Worker) Handle() {
     }
     msg := data.Message(string(payload));
     cmd := msg.Get("cmd")
-    log.Printf("Error: %s\n", cmd)
     switch cmd[0] {
     case "ask":
         worker.sched.ask_worker <- worker
