@@ -37,6 +37,7 @@ func (sched *Sched) Start() {
 
 
 func (sched *Sched) Notify() {
+    sched.timer.Reset(time.Millisecond)
 }
 
 
@@ -85,6 +86,7 @@ func (sched *Sched) NewConnectioin(conn net.Conn) {
     uconn := conn.(*net.UnixConn)
     worker := NewWorker(sched, &unix.UnixConn{UnixConn: uconn})
     sched.new_worker <- worker
+    sched.Notify()
 }
 
 
