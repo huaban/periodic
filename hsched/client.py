@@ -19,10 +19,21 @@ def makeHeader(data):
     return bytes(''.join(header), 'utf-8')
 
 
+class ConnectionError(Exception):
+    pass
+
+
 class Client(object):
-    def __init__(self, sock_file):
+    def __init__(self):
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+
+
+    def connect(self, sock_file):
         self.sock.connect(sock_file)
+        payload = self.recive()
+        if payload["type"][0] != "connection":
+            raise ConnectionError("error on connection")
+        return True
 
 
     def recive(self):
@@ -43,11 +54,8 @@ class Client(object):
 
 
 def main():
-    client = Client("libchan.sock")
-    payload = client.recive()
-    if payload["type"][0] != "connection":
-        print("error on connection", payload)
-        return
+    client = Client()
+    client.connect("huabot-sched.sock")
 
     payload = {"cmd": ["ask"]}
     client.send(payload)
