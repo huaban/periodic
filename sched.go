@@ -75,7 +75,6 @@ func (sched *Sched) NewConnectioin(conn net.Conn) {
     uconn := conn.(*net.UnixConn)
     worker := NewWorker(sched, &unix.UnixConn{UnixConn: uconn})
     sched.new_worker <- worker
-    sched.Notify()
 }
 
 
