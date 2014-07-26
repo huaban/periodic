@@ -4,6 +4,7 @@ import (
     "log"
     "net"
     "time"
+    "container/list"
     "github.com/docker/libchan/unix"
 )
 
@@ -15,6 +16,7 @@ type Sched struct {
     started bool
     worker_count int
     timer *time.Timer
+    queue *list.List
 }
 
 
@@ -26,6 +28,7 @@ func NewSched() *Sched {
     sched.die_worker = make(chan *Worker, 1)
     sched.worker_count = 0
     sched.timer = time.NewTimer(1 * time.Hour)
+    sched.queue = list.New()
     return sched
 }
 
@@ -33,6 +36,7 @@ func NewSched() *Sched {
 func (sched *Sched) Start() {
     sched.started = true
     go sched.run()
+    go sched.handle()
 }
 
 
@@ -51,32 +55,16 @@ func (sched *Sched) run() {
             go worker.HandeNewConnection()
             break
         case worker =<-sched.ask_worker:
-            job, err := NextSchedJob(0, 0)
-            if err != nil {
-                go worker.HandleNoJob()
-            }
-            now := int(time.Now().Unix())
-            if job[0].SchedAt < now {
-                sched.SubmitJob(worker, job[0].JobId)
-            } else {
-                sched.timer.Reset(time.Second * time.Duration(job[0].SchedAt - now))
-                <-sched.timer.C
-                now := int(time.Now().Unix())
-                if job[0].SchedAt <= now {
-                    sched.SubmitJob(worker, job[0].JobId)
-                } else {
-                    go worker.HandleWaitForJob()
-                }
-            }
+            sched.queue.PushBack(worker)
+            sched.Notify()
             break
         case worker =<-sched.die_worker:
             log.Printf("%v close\n", worker)
             sched.worker_count -= 1
             log.Printf("worker_count: %d\n", sched.worker_count)
+            sched.removeQueue(worker)
             worker.Close()
             break
-        case <-sched.timer.C:
-            go worker.HandleDo("haha")
         }
     }
     sched.started = false
@@ -102,8 +90,49 @@ func (sched *Sched) SubmitJob(worker *Worker, job string) {
 }
 
 
+func (sched *Sched) handle() {
+    var current time.Time
+    var timestamp int
+    for {
+        for e := sched.queue.Front(); e != nil; e = e.Next() {
+            worker := e.Value.(*Worker)
+            job, err := NextSchedJob(0, 0)
+            if err != nil {
+                sched.queue.Remove(e)
+                go worker.HandleNoJob()
+            }
+            timestamp = int(time.Now().Unix())
+            if job[0].SchedAt < timestamp {
+                sched.queue.Remove(e)
+                sched.SubmitJob(worker, job[0].JobId)
+            } else {
+                sched.timer.Reset(time.Second * time.Duration(job[0].SchedAt - timestamp))
+                current =<-sched.timer.C
+                timestamp = int(current.Unix())
+                if job[0].SchedAt <= timestamp {
+                    sched.queue.Remove(e)
+                    sched.SubmitJob(worker, job[0].JobId)
+                }
+            }
+        }
+        if sched.queue.Len() == 0 {
+            current =<-sched.timer.C
+        }
+    }
+}
+
+
 func (sched *Sched) Fail(job string) {
     return
+}
+
+
+func (sched *Sched) removeQueue(worker *Worker) {
+    for e := sched.queue.Front(); e != nil; e = e.Next() {
+        if e.Value.(*Worker) == worker {
+            sched.queue.Remove(e)
+        }
+    }
 }
 
 
