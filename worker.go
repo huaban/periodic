@@ -116,6 +116,12 @@ func (worker *Worker) Handle() {
         }
         go worker.Handle()
         break
+    case "ping":
+        if err = conn.Send(data.Empty().Set("message", "pong").Bytes(), nil); err != nil {
+            log.Printf("Error: %s\n", err.Error())
+        }
+        go worker.Handle()
+        break
     default:
         if err = conn.Send(data.Empty().Set("error", "command: " + cmd[0] + " unknown").Bytes(), nil); err != nil {
             log.Printf("Error: %s\n", err.Error())
