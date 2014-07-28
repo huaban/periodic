@@ -26,14 +26,56 @@ class ConnectionError(Exception):
 class Client(object):
     def __init__(self):
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.connected = False
+        self._sock_file = None
 
 
-    def connect(self, sock_file):
-        self.sock.connect(sock_file)
+    def _connect(self):
+        self.sock.connect(self._sock_file)
         payload = self.recive()
         if payload["type"][0] != "connection":
             raise ConnectionError("error on connection")
+
+        self.connected = True
         return True
+
+
+    def connect(self, sock_file):
+        self._sock_file = sock_file
+        return self._connect()
+
+
+    def reconnect(self):
+        self.sock.close()
+        while True:
+            try:
+                connected = self._connect()
+                if connected:
+                    break
+                sleep(0.5)
+            except:
+                pass
+
+
+    def ping(self):
+        self.send({"cmd": ["ping"]})
+        payload = self.recive()
+        if payload.get('message') == 'pong':
+            return True
+        return False
+
+
+    def ask(self):
+        self.send({"cmd": ["ask"]})
+        payload = self.recive()
+        if payload.get("msg") == 'no_job' or payload.get("msg") == 'wait_for_job':
+                return None
+
+        return payload.get("job")
+
+
+    def done(self, job):
+        self.send({"cmd": ["done"], "job": [job]})
 
 
     def recive(self):
@@ -51,18 +93,3 @@ class Client(object):
         header = makeHeader(payload)
         self.sock.send(header)
         self.sock.send(payload)
-
-
-def main():
-    client = Client()
-    client.connect("huabot-sched.sock")
-
-    payload = {"cmd": ["ask"]}
-    client.send(payload)
-
-    payload = client.recive()
-    print(payload)
-    sleep(10)
-
-if __name__ == "__main__":
-    main()
