@@ -74,7 +74,7 @@ class Client(object):
     def reconnect(self):
         while True:
             try:
-                connected = self._connect()
+                connected = yield from self._connect()
                 if connected:
                     break
                 sleep(0.5)
