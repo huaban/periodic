@@ -72,13 +72,16 @@ class Client(object):
 
 
     def reconnect(self):
+        count = 0
         while True:
             try:
+                count += 1
+                print("Try to reconnect %s %s times"%(self._sock_file, count))
                 connected = yield from self._connect()
                 if connected:
                     break
                 sleep(0.5)
-            except:
+            except Exception:
                 pass
 
 
