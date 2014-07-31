@@ -80,7 +80,7 @@ class Client(object):
                 connected = yield from self._connect()
                 if connected:
                     break
-                sleep(0.5)
+                sleep(5)
             except Exception:
                 pass
 
