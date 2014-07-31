@@ -17,6 +17,7 @@ type Sched struct {
     worker_count int
     timer *time.Timer
     queue *list.List
+    jobQueue *list.List
 }
 
 
@@ -29,6 +30,7 @@ func NewSched() *Sched {
     sched.worker_count = 0
     sched.timer = time.NewTimer(1 * time.Hour)
     sched.queue = list.New()
+    sched.jobQueue = list.New()
     return sched
 }
 
@@ -79,13 +81,32 @@ func (sched *Sched) NewConnectioin(conn net.Conn) {
 
 
 func (sched *Sched) Done(job string) {
+    for e := sched.jobQueue.Front(); e != nil; e = e.Next() {
+        if e.Value.(string) == job {
+            sched.jobQueue.Remove(e)
+        }
+    }
     return
+}
+
+
+func (sched *Sched) isDoJob(job string) bool {
+    for e := sched.jobQueue.Front(); e != nil; e = e.Next() {
+        if e.Value.(string) == job {
+            return true
+        }
+    }
+    return false
 }
 
 
 func (sched *Sched) SubmitJob(worker *Worker, job string) {
     delay := RandomDelay()
     SchedLater(job, delay)
+    if sched.isDoJob(job) {
+        return
+    }
+    sched.removeQueue(worker)
     go worker.HandleDo(job)
 }
 
@@ -103,14 +124,12 @@ func (sched *Sched) handle() {
             }
             timestamp = int(time.Now().Unix())
             if job[0].SchedAt < timestamp {
-                sched.queue.Remove(e)
                 sched.SubmitJob(worker, job[0].JobId)
             } else {
                 sched.timer.Reset(time.Second * time.Duration(job[0].SchedAt - timestamp))
                 current =<-sched.timer.C
                 timestamp = int(current.Unix())
                 if job[0].SchedAt <= timestamp {
-                    sched.queue.Remove(e)
                     sched.SubmitJob(worker, job[0].JobId)
                 }
             }
@@ -123,6 +142,11 @@ func (sched *Sched) handle() {
 
 
 func (sched *Sched) Fail(job string) {
+    for e := sched.jobQueue.Front(); e != nil; e = e.Next() {
+        if e.Value.(string) == job {
+            sched.jobQueue.Remove(e)
+        }
+    }
     return
 }
 
