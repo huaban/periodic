@@ -68,8 +68,7 @@ class Client(object):
 
     def connect(self, sock_file):
         self._sock_file = sock_file
-        with (yield from self._conn_lock):
-            return self._connect()
+        yield from self.reconnect()
 
 
     def reconnect(self):
