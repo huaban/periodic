@@ -68,29 +68,20 @@ class Client(object):
 
     def connect(self, sock_file):
         self._sock_file = sock_file
-        yield from self.reconnect()
+        yield from self._connect()
 
 
     def reconnect(self):
-        count = 0
-        with (yield from self._conn_lock):
-            while True:
-                try:
-                    count += 1
-                    try:
-                        ret = yield from self.ping()
-                        if ret:
-                            break
-                    except Exception:
-                        pass
+        try:
+            ret = yield from self.ping()
+            if ret:
+                return True
+        except Exception:
+            pass
 
-                    print("Try to reconnect %s %s times"%(self._sock_file, count))
-                    connected = yield from self._connect()
-                    if connected:
-                        break
-                    yield from asyncio.sleep(5)
-                except Exception:
-                    pass
+        print("Try to reconnecting %s"%(self._sock_file))
+        connected = yield from self._connect()
+        return connected
 
 
     def ping(self):
