@@ -18,10 +18,11 @@ type Sched struct {
     timer *time.Timer
     queue *list.List
     jobQueue *list.List
+    sockFile string
 }
 
 
-func NewSched() *Sched {
+func NewSched(sockFile string) *Sched {
     sched = new(Sched)
     sched.started = false
     sched.new_worker = make(chan *Worker, 1)
@@ -31,14 +32,29 @@ func NewSched() *Sched {
     sched.timer = time.NewTimer(1 * time.Hour)
     sched.queue = list.New()
     sched.jobQueue = list.New()
+    sched.sockFile = sockFile
     return sched
 }
 
 
-func (sched *Sched) Start() {
+func (sched *Sched) Serve() {
     sched.started = true
+    sockCheck(sched.sockFile)
     go sched.run()
     go sched.handle()
+    listen, err := net.Listen("unix", sched.sockFile)
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer listen.Close()
+    log.Printf("huabot-sched started on %s\n", sched.sockFile)
+    for {
+        conn, err := listen.Accept()
+        if err != nil {
+            log.Fatal(err)
+        }
+        sched.NewConnectioin(conn)
+    }
 }
 
 

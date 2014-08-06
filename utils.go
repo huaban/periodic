@@ -1,6 +1,9 @@
 package main
 
 import (
+    "os"
+    "net"
+    "log"
     "time"
     "strconv"
     "math/rand"
@@ -58,4 +61,17 @@ func SchedLater(job string, delay int) (err error) {
 func RandomDelay() (ret int) {
     ret = 5 + rand.Intn(200)
     return
+}
+
+
+func sockCheck(sockFile string) {
+    _, err := os.Stat(sockFile)
+    if err == nil || os.IsExist(err) {
+        conn, err := net.Dial("unix", sockFile)
+        if err == nil {
+            conn.Close()
+            log.Fatal("Huabot-sched is already started.")
+        }
+        os.Remove(sockFile)
+    }
 }
