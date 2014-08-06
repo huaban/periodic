@@ -1,5 +1,4 @@
 from . import data
-from time import sleep
 import asyncio
 
 def parseHeader(head):
@@ -80,7 +79,7 @@ class Client(object):
                 connected = yield from self._connect()
                 if connected:
                     break
-                sleep(5)
+                yield from asyncio.sleep(5)
             except Exception:
                 pass
 
