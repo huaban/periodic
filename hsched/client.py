@@ -52,6 +52,7 @@ class Client(object):
     def __init__(self):
         self._agent = None
         self.connected = False
+        self._conn_lock = asyncio.Lock()
 
 
     def _connect(self):
@@ -67,21 +68,30 @@ class Client(object):
 
     def connect(self, sock_file):
         self._sock_file = sock_file
-        return self._connect()
+        with (yield from self._conn_lock):
+            return self._connect()
 
 
     def reconnect(self):
         count = 0
-        while True:
-            try:
-                count += 1
-                print("Try to reconnect %s %s times"%(self._sock_file, count))
-                connected = yield from self._connect()
-                if connected:
-                    break
-                yield from asyncio.sleep(5)
-            except Exception:
-                pass
+        with (yield from self._conn_lock):
+            while True:
+                try:
+                    count += 1
+                    try:
+                        ret = yield from self.ping()
+                        if ret:
+                            break
+                    except Exception:
+                        pass
+
+                    print("Try to reconnect %s %s times"%(self._sock_file, count))
+                    connected = yield from self._connect()
+                    if connected:
+                        break
+                    yield from asyncio.sleep(5)
+                except Exception:
+                    pass
 
 
     def ping(self):
