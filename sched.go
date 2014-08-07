@@ -77,7 +77,6 @@ func (sched *Sched) run() {
             sched.Notify()
             break
         case worker =<-sched.die_worker:
-            log.Printf("%v close\n", worker)
             sched.worker_count -= 1
             log.Printf("worker_count: %d\n", sched.worker_count)
             sched.removeQueue(worker)
