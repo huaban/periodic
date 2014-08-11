@@ -5,6 +5,8 @@ import (
     "container/list"
     "github.com/docker/libchan/unix"
     "github.com/docker/libchan/data"
+    "huabot-sched/db"
+    "strconv"
 )
 
 type Worker struct {
@@ -33,21 +35,29 @@ func (worker *Worker) HandeNewConnection() {
 }
 
 
-func (worker *Worker) HandleDo(job string) {
+func (worker *Worker) HandleDo(job *db.Job) {
     worker.jobs.PushBack(job)
-    if err := worker.conn.Send(data.Empty().Set("job", job).Bytes(), nil); err != nil {
+    pack, err := packJob(*job)
+    if err != nil {
+        log.Printf("Error: %s\n", err.Error())
+        return
+    }
+    if err := worker.conn.Send(pack, nil); err != nil {
         worker.sched.die_worker <- worker
         log.Printf("Error: %s\n", err.Error())
         return
     }
+    job.Status = "doing"
+    job.Save()
     go worker.Handle()
 }
 
 
-func (worker *Worker) HandleDone(job string) {
-    worker.sched.Done(job)
+func (worker *Worker) HandleDone(jobHandle string) {
+    worker.sched.Done(jobHandle)
+    jobId, _ := strconv.Atoi(jobHandle)
     for e := worker.jobs.Front(); e != nil; e = e.Next() {
-        if e.Value.(string) == job {
+        if e.Value.(*db.Job).Id == jobId {
             worker.jobs.Remove(e)
             break
         }
@@ -56,10 +66,11 @@ func (worker *Worker) HandleDone(job string) {
 }
 
 
-func (worker *Worker) HandleFail(job string) {
-    worker.sched.Fail(job)
+func (worker *Worker) HandleFail(jobHandle string) {
+    worker.sched.Fail(jobHandle)
+    jobId, _ := strconv.Atoi(jobHandle)
     for e := worker.jobs.Front(); e != nil; e = e.Next() {
-        if e.Value.(string) == job {
+        if e.Value.(*db.Job).Id == jobId {
             worker.jobs.Remove(e)
             break
         }
@@ -105,19 +116,19 @@ func (worker *Worker) Handle() {
         worker.sched.ask_worker <- worker
         break
     case "done":
-        go worker.HandleDone(msg.Get("job")[0])
+        go worker.HandleDone(msg.Get("job_handle")[0])
         break
     case "fail":
-        go worker.HandleFail(msg.Get("job")[0])
+        go worker.HandleFail(msg.Get("job_handle")[0])
         break
     case "sleep":
-        if err = conn.Send(data.Empty().Set("message", "nop").Bytes(), nil); err != nil {
+        if err = conn.Send(data.Empty().Set("workload", "nop").Bytes(), nil); err != nil {
             log.Printf("Error: %s\n", err.Error())
         }
         go worker.Handle()
         break
     case "ping":
-        if err = conn.Send(data.Empty().Set("message", "pong").Bytes(), nil); err != nil {
+        if err = conn.Send(data.Empty().Set("workload", "pong").Bytes(), nil); err != nil {
             log.Printf("Error: %s\n", err.Error())
         }
         go worker.Handle()
@@ -136,6 +147,6 @@ func (worker *Worker) Handle() {
 func (worker *Worker) Close() {
     worker.conn.Close()
     for e := worker.jobs.Front(); e != nil; e = e.Next() {
-        worker.sched.Fail(e.Value.(string))
+        worker.sched.Fail(strconv.Itoa(e.Value.(*db.Job).Id))
     }
 }

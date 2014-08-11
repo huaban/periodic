@@ -2,6 +2,7 @@ package main
 
 import (
     "flag"
+    "huabot-sched/db"
 )
 
 var sched *Sched
@@ -18,7 +19,7 @@ func init() {
 
 
 func main() {
-    Connect(redisPort)
+    db.Connect(redisPort)
     sched = NewSched(sockFile)
     sched.Serve()
 }

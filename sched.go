@@ -4,7 +4,9 @@ import (
     "log"
     "net"
     "time"
+    "strconv"
     "container/list"
+    "huabot-sched/db"
     "github.com/docker/libchan/unix"
 )
 
@@ -95,9 +97,10 @@ func (sched *Sched) NewConnectioin(conn net.Conn) {
 }
 
 
-func (sched *Sched) Done(job string) {
+func (sched *Sched) Done(jobHandle string) {
+    jobId, _ := strconv.Atoi(jobHandle)
     for e := sched.jobQueue.Front(); e != nil; e = e.Next() {
-        if e.Value.(string) == job {
+        if e.Value.(*db.Job).Id == jobId {
             sched.jobQueue.Remove(e)
         }
     }
@@ -105,20 +108,24 @@ func (sched *Sched) Done(job string) {
 }
 
 
-func (sched *Sched) isDoJob(job string) bool {
+func (sched *Sched) isDoJob(job *db.Job) bool {
     for e := sched.jobQueue.Front(); e != nil; e = e.Next() {
-        if e.Value.(string) == job {
-            return true
+        if e.Value.(*db.Job).Id == job.Id {
+            old := e.Value.(*db.Job)
+            now := time.Now()
+            if old.SchedAt + old.Timeout < int(now.Unix()) {
+                return true
+            }
         }
     }
     return false
 }
 
 
-func (sched *Sched) SubmitJob(worker *Worker, job string) {
-    delay := RandomDelay()
-    SchedLater(job, delay)
+func (sched *Sched) SubmitJob(worker *Worker, job *db.Job) {
     if sched.isDoJob(job) {
+        job.Status = "doing"
+        job.Save()
         return
     }
     sched.removeQueue(worker)
@@ -132,25 +139,25 @@ func (sched *Sched) handle() {
     for {
         for e := sched.queue.Front(); e != nil; e = e.Next() {
             worker := e.Value.(*Worker)
-            job, err := NextSchedJob(0, 0)
+            jobs, err := db.RangeSchedJob("ready", 0, 0)
             if err != nil {
                 sched.queue.Remove(e)
                 go worker.HandleNoJob()
             }
-            if len(job) == 0 {
+            if len(jobs) == 0 {
                 sched.timer.Reset(time.Minute)
                 current =<-sched.timer.C
                 continue
             }
             timestamp = int(time.Now().Unix())
-            if job[0].SchedAt < timestamp {
-                sched.SubmitJob(worker, job[0].JobId)
+            if jobs[0].SchedAt < timestamp {
+                sched.SubmitJob(worker, jobs[0])
             } else {
-                sched.timer.Reset(time.Second * time.Duration(job[0].SchedAt - timestamp))
+                sched.timer.Reset(time.Second * time.Duration(jobs[0].SchedAt - timestamp))
                 current =<-sched.timer.C
                 timestamp = int(current.Unix())
-                if job[0].SchedAt <= timestamp {
-                    sched.SubmitJob(worker, job[0].JobId)
+                if jobs[0].SchedAt <= timestamp {
+                    sched.SubmitJob(worker, jobs[0])
                 }
             }
         }
@@ -161,12 +168,16 @@ func (sched *Sched) handle() {
 }
 
 
-func (sched *Sched) Fail(job string) {
+func (sched *Sched) Fail(jobHandle string) {
+    jobId, _ := strconv.Atoi(jobHandle)
     for e := sched.jobQueue.Front(); e != nil; e = e.Next() {
-        if e.Value.(string) == job {
+        if e.Value.(*db.Job).Id == jobId {
             sched.jobQueue.Remove(e)
         }
     }
+    job, _ := db.GetJob(jobId)
+    job.Status = "ready"
+    job.Save()
     return
 }
 
