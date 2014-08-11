@@ -137,6 +137,11 @@ func (sched *Sched) handle() {
                 sched.queue.Remove(e)
                 go worker.HandleNoJob()
             }
+            if len(job) == 0 {
+                sched.timer.Reset(time.Minute)
+                current =<-sched.timer.C
+                continue
+            }
             timestamp = int(time.Now().Unix())
             if job[0].SchedAt < timestamp {
                 sched.SubmitJob(worker, job[0].JobId)

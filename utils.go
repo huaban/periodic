@@ -32,6 +32,9 @@ func NextSchedJob(start, stop int) (retval []Job, err error) {
     defer conn.Close()
     cmd := "ZRANGE"
     reply, err := redis.Values(conn.Do(cmd, key, start, stop, "WITHSCORES"))
+    if err != nil {
+        return
+    }
     var _key string
     var score int
     retval = make([]Job, len(reply)/2)
