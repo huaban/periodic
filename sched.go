@@ -182,6 +182,22 @@ func (sched *Sched) Fail(jobHandle string) {
 }
 
 
+func (sched *Sched) SchedLater(jobHandle string, delay int) {
+    jobId, _ := strconv.Atoi(jobHandle)
+    for e := sched.jobQueue.Front(); e != nil; e = e.Next() {
+        if e.Value.(db.Job).Id == jobId {
+            sched.jobQueue.Remove(e)
+        }
+    }
+    job, _ := db.GetJob(jobId)
+    job.Status = "ready"
+    var now = time.Now()
+    job.SchedAt = int(now.Unix()) + delay
+    job.Save()
+    return
+}
+
+
 func (sched *Sched) removeQueue(worker *Worker) {
     for e := sched.queue.Front(); e != nil; e = e.Next() {
         if e.Value.(*Worker) == worker {

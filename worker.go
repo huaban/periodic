@@ -89,6 +89,19 @@ func (worker *Worker) HandleWaitForJob() {
 }
 
 
+func (worker *Worker) HandleSchedLater(jobHandle string, delay int) {
+    worker.sched.SchedLater(jobHandle, delay)
+    jobId, _ := strconv.Atoi(jobHandle)
+    for e := worker.jobs.Front(); e != nil; e = e.Next() {
+        if e.Value.(db.Job).Id == jobId {
+            worker.jobs.Remove(e)
+            break
+        }
+    }
+    go worker.Handle()
+}
+
+
 func (worker *Worker) HandleNoJob() {
     if err := worker.conn.Send(data.Empty().Set("workload", "no_job").Bytes(), nil); err != nil {
         worker.sched.die_worker <- worker
@@ -121,6 +134,10 @@ func (worker *Worker) Handle() {
     case "fail":
         worker.HandleFail(msg.Get("job_handle")[0])
         break
+    case "sched_later":
+        delay, _ := strconv.Atoi(msg.Get("delay")[0])
+        worker.HandleSchedLater(msg.Get("job_handle")[0], delay)
+        break
     case "sleep":
         if err = conn.Send(data.Empty().Set("workload", "nop").Bytes(), nil); err != nil {
             log.Printf("Error: %s\n", err.Error())
@@ -147,6 +164,6 @@ func (worker *Worker) Handle() {
 func (worker *Worker) Close() {
     worker.conn.Close()
     for e := worker.jobs.Front(); e != nil; e = e.Next() {
-        worker.sched.Fail(strconv.Itoa(e.Value.(*db.Job).Id))
+        worker.sched.Fail(strconv.Itoa(e.Value.(db.Job).Id))
     }
 }
