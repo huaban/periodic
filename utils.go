@@ -31,8 +31,8 @@ func packJob(job db.Job) ([]byte, error) {
         return nil, err
     }
     pack := data.Empty()
-    pack.Set("workload", string(jobStr))
-    pack.Set("job_handle", strconv.Itoa(job.Id))
+    pack = pack.Set("workload", string(jobStr))
+    pack = pack.Set("job_handle", strconv.Itoa(job.Id))
     return pack.Bytes(), nil
 }
 
