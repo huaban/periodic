@@ -24,11 +24,13 @@ func sockCheck(sockFile string) {
 }
 
 
-func packJob(job db.Job) (pack []byte, err error) {
+func packJob(job db.Job) ([]byte, error) {
     jobStr, err := json.Marshal(job)
     if err != nil {
         return nil, err
     }
-    pack = data.Empty().Set("workload", string(jobStr)).Set("job_handle", strconv.Itoa(job.Id)).Bytes()
-    return pack, nil
+    pack := data.Empty()
+    pack.Set("workload", string(jobStr))
+    pack.Set("job_handle", strconv.Itoa(job.Id))
+    return pack.Bytes(), nil
 }
