@@ -87,7 +87,7 @@ class Client(object):
     def ping(self):
         yield from self._agent.send({"cmd": ["ping"]})
         payload = yield from self._agent.recive()
-        if payload.get('message') == 'pong':
+        if payload.get('workload') == 'pong':
             return True
         return False
 
@@ -95,11 +95,11 @@ class Client(object):
     def ask(self):
         yield from self._agent.send({"cmd": ["ask"]})
         payload = yield from self._agent.recive()
-        if payload.get("msg") == 'no_job' or payload.get("msg") == 'wait_for_job':
+        if payload.get("workload") == 'no_job' or payload.get("workload") == 'wait_for_job':
                 return None
 
-        return payload.get("job")
+        return payload.get("workload")
 
 
     def done(self, job):
-        yield from self._agent.send({"cmd": ["done"], "job": [job]})
+        yield from self._agent.send({"cmd": ["done"], "job_handle": [job]})

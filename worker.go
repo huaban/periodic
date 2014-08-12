@@ -80,7 +80,7 @@ func (worker *Worker) HandleFail(jobHandle string) {
 
 
 func (worker *Worker) HandleWaitForJob() {
-    if err := worker.conn.Send(data.Empty().Set("msg", "wait_for_job").Bytes(), nil); err != nil {
+    if err := worker.conn.Send(data.Empty().Set("workload", "wait_for_job").Bytes(), nil); err != nil {
         worker.sched.die_worker <- worker
         log.Printf("Error: %s\n", err.Error())
         return
@@ -90,7 +90,7 @@ func (worker *Worker) HandleWaitForJob() {
 
 
 func (worker *Worker) HandleNoJob() {
-    if err := worker.conn.Send(data.Empty().Set("msg", "no_job").Bytes(), nil); err != nil {
+    if err := worker.conn.Send(data.Empty().Set("workload", "no_job").Bytes(), nil); err != nil {
         worker.sched.die_worker <- worker
         log.Printf("Error: %s\n", err.Error())
         return
