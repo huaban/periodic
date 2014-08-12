@@ -47,6 +47,7 @@ func api(mart *martini.ClassicMartini) {
         job.Name = j.Name
         job.Timeout = j.Timeout
         job.SchedAt = j.SchedAt
+        job.Status = "ready"
         err := job.Save()
         if err != nil {
             r.JSON(http.StatusInternalServerError, map[string]interface{}{"err": err.Error()})
