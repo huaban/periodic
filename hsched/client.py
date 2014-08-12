@@ -1,4 +1,5 @@
 from . import data
+from .job import Job
 import asyncio
 
 def parseHeader(head):
@@ -96,10 +97,6 @@ class Client(object):
         yield from self._agent.send({"cmd": ["ask"]})
         payload = yield from self._agent.recive()
         if payload.get("workload") == 'no_job' or payload.get("workload") == 'wait_for_job':
-                return None
+            return None
 
-        return payload.get("workload")
-
-
-    def done(self, job):
-        yield from self._agent.send({"cmd": ["done"], "job_handle": [job]})
+        return Job(payload["workload"], self._agent)
