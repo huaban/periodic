@@ -21,5 +21,6 @@ func init() {
 func main() {
     db.Connect(redisPort)
     sched = NewSched(sockFile)
-    sched.Serve()
+    go sched.Serve()
+    StartHttpServer()
 }

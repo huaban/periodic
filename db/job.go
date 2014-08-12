@@ -81,7 +81,7 @@ func DelJob(id int) (err error) {
 }
 
 
-func CountJob(id int) (count int, err error) {
+func CountJob() (count int, err error) {
     var tableName = GetTableName(Job{})
     count, err = CountIndex(tableName)
     return
@@ -112,5 +112,12 @@ func RangeSchedJob(status string, start, stop int) (jobs []*Job, err error) {
         a, _ :=  GetJob(idx.Score)
         jobs[k] = a
     }
+    return
+}
+
+
+func CountSchedJob(status string) (count int, err error) {
+    var tableName = GetTableName(Job{})
+    count, err = CountIndex(tableName + ":" + status + ":sched")
     return
 }
