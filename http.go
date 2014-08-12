@@ -15,7 +15,7 @@ import (
 const API = ""
 
 
-func StartHttpServer(addr string) {
+func StartHttpServer(addr string, sched *Sched) {
     mart := martini.Classic()
     mart.Use(render.Renderer(render.Options{
         Directory: "templates",
@@ -27,7 +27,7 @@ func StartHttpServer(addr string) {
         HTMLContentType: "application/xhtml+xml",
     }))
 
-    api(mart)
+    api(mart, sched)
 
     mart.RunOnAddr(addr)
 }
@@ -40,7 +40,7 @@ type JobForm struct {
 }
 
 
-func api(mart *martini.ClassicMartini) {
+func api(mart *martini.ClassicMartini, sched *Sched) {
 
     mart.Post(API + "/jobs/", binding.Bind(JobForm{}), func(j JobForm, r render.Render) {
         job := db.Job{
@@ -54,6 +54,7 @@ func api(mart *martini.ClassicMartini) {
             r.JSON(http.StatusInternalServerError, map[string]interface{}{"err": err.Error()})
             return
         }
+        sched.Notify()
         r.JSON(http.StatusOK, map[string]db.Job{"job": job})
     })
 
@@ -127,5 +128,11 @@ func api(mart *martini.ClassicMartini) {
             return
         }
         r.JSON(http.StatusNotFound, map[string]interface{}{})
+    })
+
+
+    mart.Post(API + "/notify", func(r render.Render) {
+        sched.Notify()
+        r.JSON(http.StatusOK, map[string]interface{}{})
     })
 }
