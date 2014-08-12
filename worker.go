@@ -116,10 +116,10 @@ func (worker *Worker) Handle() {
         worker.sched.ask_worker <- worker
         break
     case "done":
-        go worker.HandleDone(msg.Get("job_handle")[0])
+        worker.HandleDone(msg.Get("job_handle")[0])
         break
     case "fail":
-        go worker.HandleFail(msg.Get("job_handle")[0])
+        worker.HandleFail(msg.Get("job_handle")[0])
         break
     case "sleep":
         if err = conn.Send(data.Empty().Set("workload", "nop").Bytes(), nil); err != nil {
