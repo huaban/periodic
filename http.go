@@ -49,6 +49,10 @@ func api(mart *martini.ClassicMartini, sched *Sched) {
             SchedAt: j.SchedAt,
             Status: "ready",
         }
+        jobId, _ := db.GetIndex("job:name", job.Name)
+        if jobId > 0 {
+            job.Id = jobId
+        }
         err := job.Save()
         if err != nil {
             r.JSON(http.StatusInternalServerError, map[string]interface{}{"err": err.Error()})
