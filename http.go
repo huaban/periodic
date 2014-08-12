@@ -15,7 +15,7 @@ import (
 const API = ""
 
 
-func StartHttpServer() {
+func StartHttpServer(addr string) {
     mart := martini.Classic()
     mart.Use(render.Renderer(render.Options{
         Directory: "templates",
@@ -29,7 +29,7 @@ func StartHttpServer() {
 
     api(mart)
 
-    mart.Run()
+    mart.RunOnAddr(addr)
 }
 
 
