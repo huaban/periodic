@@ -93,6 +93,7 @@ func api(mart *martini.ClassicMartini) {
         r.JSON(http.StatusOK, map[string]interface{}{"jobs": jobs, "total": count, "current": start})
     })
 
+
     mart.Get(API + "/jobs/", func(req *http.Request, r render.Render) {
         qs := req.URL.Query()
         var start, limit, stop int
@@ -109,7 +110,7 @@ func api(mart *martini.ClassicMartini) {
         jobs, err = db.RangeJob(start, stop)
         count, _ = db.CountJob()
         if err != nil {
-            log.Printf("Error: RangeSchedJob error %s\n", err)
+            log.Printf("Error: RangeJob error %s\n", err)
             r.JSON(http.StatusOK, map[string]interface{}{"jobs": "[]", "total": count, "current": start})
             return
         }
