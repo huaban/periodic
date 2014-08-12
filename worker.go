@@ -35,9 +35,9 @@ func (worker *Worker) HandeNewConnection() {
 }
 
 
-func (worker *Worker) HandleDo(job *db.Job) {
+func (worker *Worker) HandleDo(job db.Job) {
     worker.jobs.PushBack(job)
-    pack, err := packJob(*job)
+    pack, err := packJob(job)
     if err != nil {
         log.Printf("Error: %s\n", err.Error())
         return
@@ -57,7 +57,7 @@ func (worker *Worker) HandleDone(jobHandle string) {
     worker.sched.Done(jobHandle)
     jobId, _ := strconv.Atoi(jobHandle)
     for e := worker.jobs.Front(); e != nil; e = e.Next() {
-        if e.Value.(*db.Job).Id == jobId {
+        if e.Value.(db.Job).Id == jobId {
             worker.jobs.Remove(e)
             break
         }

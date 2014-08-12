@@ -43,17 +43,18 @@ type JobForm struct {
 func api(mart *martini.ClassicMartini) {
 
     mart.Post(API + "/jobs/", binding.Bind(JobForm{}), func(j JobForm, r render.Render) {
-        job := new(db.Job)
-        job.Name = j.Name
-        job.Timeout = j.Timeout
-        job.SchedAt = j.SchedAt
-        job.Status = "ready"
+        job := db.Job{
+            Name: j.Name,
+            Timeout: j.Timeout,
+            SchedAt: j.SchedAt,
+            Status: "status",
+        }
         err := job.Save()
         if err != nil {
             r.JSON(http.StatusInternalServerError, map[string]interface{}{"err": err.Error()})
             return
         }
-        r.JSON(http.StatusOK, map[string]db.Job{"job": *job})
+        r.JSON(http.StatusOK, map[string]db.Job{"job": job})
     })
 
 
@@ -64,7 +65,7 @@ func api(mart *martini.ClassicMartini) {
             r.JSON(http.StatusInternalServerError, map[string]interface{}{"err": err.Error()})
             return
         }
-        r.JSON(http.StatusOK, map[string]db.Job{"job": *job})
+        r.JSON(http.StatusOK, map[string]db.Job{"job": job})
     })
 
 
@@ -80,31 +81,7 @@ func api(mart *martini.ClassicMartini) {
             limit = 10
         }
         stop = start + limit
-        var jobs []*db.Job
-        var count int
-        jobs, err = db.RangeSchedJob(status, start, stop)
-        if err != nil {
-            log.Printf("Error: RangeSchedJob error %s\n", err)
-            r.JSON(http.StatusOK, map[string]interface{}{"jobs": "[]", "total": count, "current": start})
-            return
-        }
-        r.JSON(http.StatusOK, map[string]interface{}{"jobs": jobs, "total": count, "current": start})
-    })
-
-
-    mart.Get(API + "/jobs/(?P<status>ready|doing)/", func(params martini.Params, req *http.Request, r render.Render) {
-        status := params["status"]
-        qs := req.URL.Query()
-        var start, limit, stop int
-        var err error
-        if start, err = strconv.Atoi(qs.Get("start")); err != nil {
-            start = 0
-        }
-        if limit, err = strconv.Atoi(qs.Get("limit")); err != nil {
-            limit = 10
-        }
-        stop = start + limit
-        var jobs []*db.Job
+        var jobs []db.Job
         var count int
         jobs, err = db.RangeSchedJob(status, start, stop)
         count, _ = db.CountSchedJob(status)
@@ -127,7 +104,7 @@ func api(mart *martini.ClassicMartini) {
             limit = 10
         }
         stop = start + limit
-        var jobs []*db.Job
+        var jobs []db.Job
         var count int
         jobs, err = db.RangeJob(start, stop)
         count, _ = db.CountJob()
@@ -142,7 +119,12 @@ func api(mart *martini.ClassicMartini) {
 
     mart.Delete(API + "/jobs/(?P<job_id>[0-9]+)", func(params martini.Params, r render.Render) {
         id, _ := strconv.Atoi(params["job_id"])
-        db.DelJob(id)
+        err := db.DelJob(id)
+        if err != nil {
+            log.Printf("Error: DelJob error %s\n", err)
+            r.JSON(http.StatusOK, map[string]interface{}{"err": err.Error()})
+            return
+        }
         r.JSON(http.StatusNotFound, map[string]interface{}{})
     })
 }

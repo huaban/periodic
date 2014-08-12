@@ -100,7 +100,7 @@ func (sched *Sched) NewConnectioin(conn net.Conn) {
 func (sched *Sched) Done(jobHandle string) {
     jobId, _ := strconv.Atoi(jobHandle)
     for e := sched.jobQueue.Front(); e != nil; e = e.Next() {
-        if e.Value.(*db.Job).Id == jobId {
+        if e.Value.(db.Job).Id == jobId {
             sched.jobQueue.Remove(e)
         }
     }
@@ -108,10 +108,10 @@ func (sched *Sched) Done(jobHandle string) {
 }
 
 
-func (sched *Sched) isDoJob(job *db.Job) bool {
+func (sched *Sched) isDoJob(job db.Job) bool {
     for e := sched.jobQueue.Front(); e != nil; e = e.Next() {
-        if e.Value.(*db.Job).Id == job.Id {
-            old := e.Value.(*db.Job)
+        if e.Value.(db.Job).Id == job.Id {
+            old := e.Value.(db.Job)
             now := time.Now()
             if old.SchedAt + old.Timeout < int(now.Unix()) {
                 return true
@@ -122,7 +122,7 @@ func (sched *Sched) isDoJob(job *db.Job) bool {
 }
 
 
-func (sched *Sched) SubmitJob(worker *Worker, job *db.Job) {
+func (sched *Sched) SubmitJob(worker *Worker, job db.Job) {
     if sched.isDoJob(job) {
         job.Status = "doing"
         job.Save()
@@ -171,7 +171,7 @@ func (sched *Sched) handle() {
 func (sched *Sched) Fail(jobHandle string) {
     jobId, _ := strconv.Atoi(jobHandle)
     for e := sched.jobQueue.Front(); e != nil; e = e.Next() {
-        if e.Value.(*db.Job).Id == jobId {
+        if e.Value.(db.Job).Id == jobId {
             sched.jobQueue.Remove(e)
         }
     }

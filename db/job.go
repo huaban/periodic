@@ -18,7 +18,7 @@ type Job struct {
 
 
 func (job *Job) Save() (err error) {
-    var tableName = GetTableName(job)
+    var tableName = GetTableName(*job)
     var key string
     if job.Id > 0 {
         var old Job
@@ -52,7 +52,7 @@ func (job *Job) Save() (err error) {
 
 
 func (job *Job) Delete() (err error) {
-    var tableName = GetTableName(job)
+    var tableName = GetTableName(*job)
     var key = tableName + ":" + strconv.Itoa(job.Id)
     err = DelObject(key)
     DelIndex(tableName, strconv.Itoa(job.Id))
@@ -62,16 +62,16 @@ func (job *Job) Delete() (err error) {
 }
 
 
-func GetJob(id int) (job *Job, err error) {
+func GetJob(id int) (job Job, err error) {
     var tableName = GetTableName(job)
     var key = tableName + ":" +  strconv.Itoa(id)
-    err = GetObject(key, job)
+    err = GetObject(key, &job)
     return
 }
 
 
 func DelJob(id int) (err error) {
-    var job *Job
+    var job Job
     job, err = GetJob(id)
     if err != nil {
         return err
@@ -88,29 +88,29 @@ func CountJob() (count int, err error) {
 }
 
 
-func RangeJob(start, stop int, rev ...bool) (jobs []*Job, err error) {
+func RangeJob(start, stop int, rev ...bool) (jobs []Job, err error) {
     var tableName = GetTableName(Job{})
     var idxs []Index
     idxs, err = RangeIndex(tableName, start, stop, rev...)
-    jobs = make([]*Job, len(idxs))
+    jobs = make([]Job, len(idxs))
 
     for k, idx := range idxs {
-        a, _ :=  GetJob(idx.Score)
-        jobs[k] = a
+        job, _ :=  GetJob(idx.Score)
+        jobs[k] = job
     }
     return
 }
 
 
-func RangeSchedJob(status string, start, stop int) (jobs []*Job, err error) {
+func RangeSchedJob(status string, start, stop int) (jobs []Job, err error) {
     var tableName = GetTableName(Job{})
     var idxs []Index
     idxs, err = RangeIndex(tableName + ":" + status + ":sched", start, stop)
-    jobs = make([]*Job, len(idxs))
+    jobs = make([]Job, len(idxs))
 
     for k, idx := range idxs {
-        a, _ :=  GetJob(idx.Score)
-        jobs[k] = a
+        job, _ :=  GetJob(idx.Score)
+        jobs[k] = job
     }
     return
 }
