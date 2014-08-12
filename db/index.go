@@ -14,7 +14,7 @@ func AddIndex(name, member string, score int) (err error) {
     var key = "index:" + name
     var conn = pool.Get()
     defer conn.Close()
-    _, err = conn.Do("ZADD", key, score, member)
+    _, err = conn.Do("ZADD", PREFIX + key, score, member)
     return
 }
 
@@ -22,7 +22,7 @@ func GetIndex(name, member string) (score int, err error) {
     var key = "index:" + name
     var conn = pool.Get()
     defer conn.Close()
-    score, err = redis.Int(conn.Do("ZSCORE", key, member))
+    score, err = redis.Int(conn.Do("ZSCORE", PREFIX + key, member))
     return
 }
 
@@ -36,7 +36,7 @@ func RangeIndex(name string, start, stop int, rev ...bool) (retval []Index, err 
             cmd = "ZREVRANGE"
         }
     }
-    reply, err := redis.Values(conn.Do(cmd, key, start, stop, "WITHSCORES"))
+    reply, err := redis.Values(conn.Do(cmd, PREFIX + key, start, stop, "WITHSCORES"))
     var _key string
     var score int
     retval = make([]Index, len(reply)/2)
@@ -55,7 +55,7 @@ func CountIndex(name string) (count int, err error) {
     var key = "index:" + name
     var conn = pool.Get()
     defer conn.Close()
-    count, err = redis.Int(conn.Do("ZCARD", key))
+    count, err = redis.Int(conn.Do("ZCARD", PREFIX + key))
     return
 }
 
@@ -69,6 +69,6 @@ func DelIndex(name, member string) (err error) {
     var key = "index:" + name
     var conn = pool.Get()
     defer conn.Close()
-    _, err = conn.Do("ZREM", key, member)
+    _, err = conn.Do("ZREM", PREFIX + key, member)
     return
 }

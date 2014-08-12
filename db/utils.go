@@ -7,11 +7,13 @@ import (
     "strings"
 )
 
+const PREFIX = "huabot-sched:"
+
 func GetObject(key string, obj interface{}) (err error) {
     var data []byte
     var conn = pool.Get()
     defer conn.Close()
-    data, err = redis.Bytes(conn.Do("GET", key))
+    data, err = redis.Bytes(conn.Do("GET", PREFIX + key))
     if err != nil {
         return
     }
@@ -27,21 +29,21 @@ func SetObject(key string, obj interface{}) (err error) {
     }
     var conn = pool.Get()
     defer conn.Close()
-    _, err = conn.Do("SET", key, data)
+    _, err = conn.Do("SET", PREFIX + key, data)
     return
 }
 
 func DelObject(key string) (err error) {
     var conn = pool.Get()
     defer conn.Close()
-    _, err = conn.Do("DEL", key)
+    _, err = conn.Do("DEL", PREFIX + key)
     return
 }
 
 func NextSequence(name string) (val int, err error) {
     var conn = pool.Get()
     defer conn.Close()
-    val, err = redis.Int(conn.Do("INCRBY", "sequence:" + name, 1))
+    val, err = redis.Int(conn.Do("INCRBY", PREFIX + "sequence:" + name, 1))
     return
 }
 
