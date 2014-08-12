@@ -63,7 +63,7 @@ func api(mart *martini.ClassicMartini, sched *Sched) {
         jobId, _ := strconv.Atoi(params["job_id"])
         job, err := db.GetJob(jobId)
         if err != nil {
-            r.JSON(http.StatusInternalServerError, map[string]interface{}{"err": err.Error()})
+            r.JSON(http.StatusNotFound, map[string]interface{}{"err": err.Error()})
             return
         }
         r.JSON(http.StatusOK, map[string]db.Job{"job": job})
@@ -127,7 +127,7 @@ func api(mart *martini.ClassicMartini, sched *Sched) {
             r.JSON(http.StatusOK, map[string]interface{}{"err": err.Error()})
             return
         }
-        r.JSON(http.StatusNotFound, map[string]interface{}{})
+        r.JSON(http.StatusOK, map[string]interface{}{})
     })
 
 
