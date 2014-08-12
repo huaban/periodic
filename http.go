@@ -63,8 +63,16 @@ func api(mart *martini.ClassicMartini, sched *Sched) {
     })
 
 
-    mart.Get(API + "/jobs/(?P<job_id>[0-9]+)", func(params martini.Params, r render.Render) {
-        jobId, _ := strconv.Atoi(params["job_id"])
+    mart.Get(API + "/jobs/(?P<job_id>[0-9a-zA-Z]+)",
+            func(params martini.Params, req *http.Request, r render.Render) {
+        qs := req.URL.Query()
+        id := params["job_id"]
+        var jobId int
+        if qs.Get("id_type") == "name" {
+            jobId, _ = db.GetIndex("job:name", id)
+        } else {
+            jobId, _ = strconv.Atoi(id)
+        }
         job, err := db.GetJob(jobId)
         if err != nil {
             r.JSON(http.StatusNotFound, map[string]interface{}{"err": err.Error()})
