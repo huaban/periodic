@@ -40,6 +40,11 @@ func (job *Job) Save() (err error) {
             return
         }
     }
+    idx, _ := GetIndex(tableName + ":name", job.Name)
+    if idx != job.Id {
+        err = errors.New("Duplicate Job name: " + job.Name)
+        return
+    }
     key = tableName + ":" + strconv.Itoa(job.Id)
     err = SetObject(key, job)
     if err == nil {
