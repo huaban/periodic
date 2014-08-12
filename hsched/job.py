@@ -3,8 +3,8 @@ import json
 class Job(object):
 
     def __init__(self, workload, client):
-        self.workload = json.loads(workload)
-        self.job_handle = self.workload["job_id"]
+        self.workload = json.loads(workload[0])
+        self.job_handle = str(self.workload["job_id"])
         self.client = client
 
 
