@@ -32,7 +32,7 @@ func (job *Job) Save() (err error) {
             DelIndex(tableName + ":name", old.Name)
         }
         if old.Status != job.Status {
-            DelIndex(tableName + ":" + job.Status + ":sched", strconv.Itoa(job.Id))
+            DelIndex(tableName + ":" + old.Status + ":sched", strconv.Itoa(job.Id))
         }
     } else {
         job.Id, err = NextSequence(tableName)
@@ -41,7 +41,7 @@ func (job *Job) Save() (err error) {
         }
     }
     idx, _ := GetIndex(tableName + ":name", job.Name)
-    if idx != job.Id {
+    if idx > 0 && idx != job.Id {
         err = errors.New("Duplicate Job name: " + job.Name)
         return
     }

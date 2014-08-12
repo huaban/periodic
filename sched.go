@@ -123,9 +123,9 @@ func (sched *Sched) isDoJob(job db.Job) bool {
 
 
 func (sched *Sched) SubmitJob(worker *Worker, job db.Job) {
+    job.Status = "doing"
+    job.Save()
     if sched.isDoJob(job) {
-        job.Status = "doing"
-        job.Save()
         return
     }
     sched.removeQueue(worker)
