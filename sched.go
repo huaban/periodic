@@ -107,7 +107,9 @@ func (sched *Sched) isDoJob(job db.Job) bool {
         if e.Value.(db.Job).Id == job.Id {
             old := e.Value.(db.Job)
             now := time.Now()
-            if old.SchedAt + old.Timeout < int(now.Unix()) {
+            if old.Timeout > 0 && old.SchedAt + old.Timeout < int(now.Unix()) {
+                return false
+            } else {
                 return true
             }
         }
@@ -123,6 +125,7 @@ func (sched *Sched) SubmitJob(worker *Worker, job db.Job) {
         return
     }
     sched.removeQueue(worker)
+    sched.jobQueue.PushBack(job)
     go worker.HandleDo(job)
 }
 
