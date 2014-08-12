@@ -97,11 +97,7 @@ func (sched *Sched) NewConnectioin(conn net.Conn) {
 
 
 func (sched *Sched) Done(jobId int) {
-    for e := sched.jobQueue.Front(); e != nil; e = e.Next() {
-        if e.Value.(db.Job).Id == jobId {
-            sched.jobQueue.Remove(e)
-        }
-    }
+    removeListJob(sched.jobQueue, jobId)
     return
 }
 
@@ -167,11 +163,7 @@ func (sched *Sched) handle() {
 
 
 func (sched *Sched) Fail(jobId int) {
-    for e := sched.jobQueue.Front(); e != nil; e = e.Next() {
-        if e.Value.(db.Job).Id == jobId {
-            sched.jobQueue.Remove(e)
-        }
-    }
+    removeListJob(sched.jobQueue, jobId)
     job, _ := db.GetJob(jobId)
     job.Status = "ready"
     job.Save()
@@ -180,11 +172,7 @@ func (sched *Sched) Fail(jobId int) {
 
 
 func (sched *Sched) SchedLater(jobId int, delay int) {
-    for e := sched.jobQueue.Front(); e != nil; e = e.Next() {
-        if e.Value.(db.Job).Id == jobId {
-            sched.jobQueue.Remove(e)
-        }
-    }
+    removeListJob(sched.jobQueue, jobId)
     job, _ := db.GetJob(jobId)
     job.Status = "ready"
     var now = time.Now()

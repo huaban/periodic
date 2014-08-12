@@ -6,6 +6,7 @@ import (
     "log"
     "strconv"
     "encoding/json"
+    "container/list"
     "huabot-sched/db"
     "github.com/docker/libchan/data"
 )
@@ -33,4 +34,14 @@ func packJob(job db.Job) ([]byte, error) {
     pack.Set("workload", string(jobStr))
     pack.Set("job_handle", strconv.Itoa(job.Id))
     return pack.Bytes(), nil
+}
+
+
+func removeListJob(l *list.List, jobId int) {
+    for e := l.Front(); e != nil; e = e.Next() {
+        if e.Value.(db.Job).Id == jobId {
+            l.Remove(e)
+            break
+        }
+    }
 }

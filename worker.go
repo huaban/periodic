@@ -55,24 +55,14 @@ func (worker *Worker) HandleDo(job db.Job) {
 
 func (worker *Worker) HandleDone(jobId int) {
     worker.sched.Done(jobId)
-    for e := worker.jobs.Front(); e != nil; e = e.Next() {
-        if e.Value.(db.Job).Id == jobId {
-            worker.jobs.Remove(e)
-            break
-        }
-    }
+    removeListJob(worker.jobs, jobId)
     go worker.Handle()
 }
 
 
 func (worker *Worker) HandleFail(jobId int) {
     worker.sched.Fail(jobId)
-    for e := worker.jobs.Front(); e != nil; e = e.Next() {
-        if e.Value.(*db.Job).Id == jobId {
-            worker.jobs.Remove(e)
-            break
-        }
-    }
+    removeListJob(worker.jobs, jobId)
     go worker.Handle()
 }
 
@@ -89,12 +79,7 @@ func (worker *Worker) HandleWaitForJob() {
 
 func (worker *Worker) HandleSchedLater(jobId, delay int) {
     worker.sched.SchedLater(jobId, delay)
-    for e := worker.jobs.Front(); e != nil; e = e.Next() {
-        if e.Value.(db.Job).Id == jobId {
-            worker.jobs.Remove(e)
-            break
-        }
-    }
+    removeListJob(worker.jobs, jobId)
     go worker.Handle()
 }
 
