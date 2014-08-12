@@ -158,7 +158,7 @@ func api(mart *martini.ClassicMartini, sched *Sched) {
     })
 
 
-    mart.Post(API + "/status", func(r render.Render) {
+    mart.Get(API + "/status", func(r render.Render) {
         var status = make(map[string]int)
         var count int
         count, _ = db.CountJob()
