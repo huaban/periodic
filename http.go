@@ -47,7 +47,7 @@ func api(mart *martini.ClassicMartini) {
             Name: j.Name,
             Timeout: j.Timeout,
             SchedAt: j.SchedAt,
-            Status: "status",
+            Status: "ready",
         }
         err := job.Save()
         if err != nil {
