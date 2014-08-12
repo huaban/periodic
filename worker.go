@@ -26,7 +26,9 @@ func NewWorker(sched *Sched, conn *unix.UnixConn) (worker *Worker) {
 
 
 func (worker *Worker) HandeNewConnection() {
-    if err := worker.conn.Send(data.Empty().Set("type", "connection").Bytes(), nil); err != nil {
+    var pack = data.Empty()
+    pack.Set("type", "connection")
+    if err := worker.conn.Send(pack.Bytes(), nil); err != nil {
         worker.sched.die_worker <- worker
         log.Printf("Error: %s\n", err.Error())
         return
@@ -68,7 +70,9 @@ func (worker *Worker) HandleFail(jobId int) {
 
 
 func (worker *Worker) HandleWaitForJob() {
-    if err := worker.conn.Send(data.Empty().Set("workload", "wait_for_job").Bytes(), nil); err != nil {
+    var pack = data.Empty()
+    pack.Set("workload", "wait_for_job")
+    if err := worker.conn.Send(pack.Bytes(), nil); err != nil {
         worker.sched.die_worker <- worker
         log.Printf("Error: %s\n", err.Error())
         return
@@ -85,7 +89,9 @@ func (worker *Worker) HandleSchedLater(jobId, delay int) {
 
 
 func (worker *Worker) HandleNoJob() {
-    if err := worker.conn.Send(data.Empty().Set("workload", "no_job").Bytes(), nil); err != nil {
+    var pack = data.Empty()
+    pack.Set("workload", "no_job")
+    if err := worker.conn.Send(pack.Bytes(), nil); err != nil {
         worker.sched.die_worker <- worker
         log.Printf("Error: %s\n", err.Error())
         return
@@ -124,19 +130,25 @@ func (worker *Worker) Handle() {
         worker.HandleSchedLater(jobId, delay)
         break
     case "sleep":
-        if err = conn.Send(data.Empty().Set("workload", "nop").Bytes(), nil); err != nil {
+        var pack = data.Empty()
+        pack.Set("workload", "nop")
+        if err := conn.Send(pack.Bytes(), nil); err != nil {
             log.Printf("Error: %s\n", err.Error())
         }
         go worker.Handle()
         break
     case "ping":
-        if err = conn.Send(data.Empty().Set("workload", "pong").Bytes(), nil); err != nil {
+        var pack = data.Empty()
+        pack.Set("workload", "pong")
+        if err := conn.Send(pack.Bytes(), nil); err != nil {
             log.Printf("Error: %s\n", err.Error())
         }
         go worker.Handle()
         break
     default:
-        if err = conn.Send(data.Empty().Set("error", "command: " + cmd[0] + " unknown").Bytes(), nil); err != nil {
+        var pack = data.Empty()
+        pack.Set("error", "command: " + cmd[0] + "unknown")
+        if err := conn.Send(pack.Bytes(), nil); err != nil {
             log.Printf("Error: %s\n", err.Error())
             worker.sched.die_worker <- worker
         }
