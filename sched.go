@@ -4,7 +4,6 @@ import (
     "log"
     "net"
     "time"
-    "strconv"
     "container/list"
     "huabot-sched/db"
     "github.com/docker/libchan/unix"
@@ -97,8 +96,7 @@ func (sched *Sched) NewConnectioin(conn net.Conn) {
 }
 
 
-func (sched *Sched) Done(jobHandle string) {
-    jobId, _ := strconv.Atoi(jobHandle)
+func (sched *Sched) Done(jobId int) {
     for e := sched.jobQueue.Front(); e != nil; e = e.Next() {
         if e.Value.(db.Job).Id == jobId {
             sched.jobQueue.Remove(e)
@@ -168,8 +166,7 @@ func (sched *Sched) handle() {
 }
 
 
-func (sched *Sched) Fail(jobHandle string) {
-    jobId, _ := strconv.Atoi(jobHandle)
+func (sched *Sched) Fail(jobId int) {
     for e := sched.jobQueue.Front(); e != nil; e = e.Next() {
         if e.Value.(db.Job).Id == jobId {
             sched.jobQueue.Remove(e)
@@ -182,8 +179,7 @@ func (sched *Sched) Fail(jobHandle string) {
 }
 
 
-func (sched *Sched) SchedLater(jobHandle string, delay int) {
-    jobId, _ := strconv.Atoi(jobHandle)
+func (sched *Sched) SchedLater(jobId int, delay int) {
     for e := sched.jobQueue.Front(); e != nil; e = e.Next() {
         if e.Value.(db.Job).Id == jobId {
             sched.jobQueue.Remove(e)

@@ -53,9 +53,8 @@ func (worker *Worker) HandleDo(job db.Job) {
 }
 
 
-func (worker *Worker) HandleDone(jobHandle string) {
-    worker.sched.Done(jobHandle)
-    jobId, _ := strconv.Atoi(jobHandle)
+func (worker *Worker) HandleDone(jobId int) {
+    worker.sched.Done(jobId)
     for e := worker.jobs.Front(); e != nil; e = e.Next() {
         if e.Value.(db.Job).Id == jobId {
             worker.jobs.Remove(e)
@@ -66,9 +65,8 @@ func (worker *Worker) HandleDone(jobHandle string) {
 }
 
 
-func (worker *Worker) HandleFail(jobHandle string) {
-    worker.sched.Fail(jobHandle)
-    jobId, _ := strconv.Atoi(jobHandle)
+func (worker *Worker) HandleFail(jobId int) {
+    worker.sched.Fail(jobId)
     for e := worker.jobs.Front(); e != nil; e = e.Next() {
         if e.Value.(*db.Job).Id == jobId {
             worker.jobs.Remove(e)
@@ -89,9 +87,8 @@ func (worker *Worker) HandleWaitForJob() {
 }
 
 
-func (worker *Worker) HandleSchedLater(jobHandle string, delay int) {
-    worker.sched.SchedLater(jobHandle, delay)
-    jobId, _ := strconv.Atoi(jobHandle)
+func (worker *Worker) HandleSchedLater(jobId, delay int) {
+    worker.sched.SchedLater(jobId, delay)
     for e := worker.jobs.Front(); e != nil; e = e.Next() {
         if e.Value.(db.Job).Id == jobId {
             worker.jobs.Remove(e)
@@ -129,14 +126,17 @@ func (worker *Worker) Handle() {
         worker.sched.ask_worker <- worker
         break
     case "done":
-        worker.HandleDone(msg.Get("job_handle")[0])
+        jobId, _ := strconv.Atoi(msg.Get("job_handle")[0])
+        worker.HandleDone(jobId)
         break
     case "fail":
-        worker.HandleFail(msg.Get("job_handle")[0])
+        jobId, _ := strconv.Atoi(msg.Get("job_handle")[0])
+        worker.HandleFail(jobId)
         break
     case "sched_later":
+        jobId, _ := strconv.Atoi(msg.Get("job_handle")[0])
         delay, _ := strconv.Atoi(msg.Get("delay")[0])
-        worker.HandleSchedLater(msg.Get("job_handle")[0], delay)
+        worker.HandleSchedLater(jobId, delay)
         break
     case "sleep":
         if err = conn.Send(data.Empty().Set("workload", "nop").Bytes(), nil); err != nil {
@@ -164,6 +164,6 @@ func (worker *Worker) Handle() {
 func (worker *Worker) Close() {
     worker.conn.Close()
     for e := worker.jobs.Front(); e != nil; e = e.Next() {
-        worker.sched.Fail(strconv.Itoa(e.Value.(db.Job).Id))
+        worker.sched.Fail(e.Value.(db.Job).Id)
     }
 }
