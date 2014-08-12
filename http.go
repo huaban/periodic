@@ -156,4 +156,17 @@ func api(mart *martini.ClassicMartini, sched *Sched) {
         sched.Notify()
         r.JSON(http.StatusOK, map[string]interface{}{})
     })
+
+
+    mart.Post(API + "/status", func(r render.Render) {
+        var status = make(map[string]int)
+        var count int
+        count, _ = db.CountJob()
+        status["total"] = count
+        count, _ = db.CountSchedJob("ready")
+        status["ready"] = count
+        count, _ = db.CountSchedJob("doing")
+        status["doing"] = count
+        r.JSON(http.StatusOK, status)
+    })
 }
