@@ -109,7 +109,8 @@ func RangeSchedJob(status string, start, stop int) (jobs []Job, err error) {
     jobs = make([]Job, len(idxs))
 
     for k, idx := range idxs {
-        job, _ :=  GetJob(idx.Score)
+        jobId, _ := strconv.Atoi(idx.Name)
+        job, _ :=  GetJob(jobId)
         jobs[k] = job
     }
     return
