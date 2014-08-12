@@ -138,4 +138,11 @@ func api(mart *martini.ClassicMartini) {
         }
         r.JSON(http.StatusOK, map[string]interface{}{"jobs": jobs, "total": count, "current": start})
     })
+
+
+    mart.Delete(API + "/jobs/(?P<job_id>[0-9]+)", func(params martini.Params, r render.Render) {
+        id, _ := strconv.Atoi(params["job_id"])
+        db.DelJob(id)
+        r.JSON(http.StatusNotFound, map[string]interface{}{})
+    })
 }
