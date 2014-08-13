@@ -45,3 +45,29 @@ func removeListJob(l *list.List, jobId int) {
         }
     }
 }
+
+
+func makeHeader(data []byte, fds []int) ([]byte, error) {
+    header := make([]byte, 4)
+
+    length := uint32(len(data))
+
+    if length > 0x7fffffff {
+        return nil, fmt.Errorf("Data to large")
+    }
+
+    header[0] = byte((length >> 24) & 0xff)
+    header[1] = byte((length >> 16) & 0xff)
+    header[2] = byte((length >> 8) & 0xff)
+    header[3] = byte((length >> 0) & 0xff)
+
+    return header, nil
+}
+
+
+func parseHeader(header []byte) (uint32) {
+    length := uint32(header[0])<<24 | uint32(header[1])<<16 | uint32(header[2])<<8 | uint32(header[3])
+    length = length & ^uint32(0x80000000)
+
+    return length
+}
