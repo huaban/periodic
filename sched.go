@@ -6,7 +6,6 @@ import (
     "time"
     "container/list"
     "huabot-sched/db"
-    "github.com/docker/libchan/unix"
 )
 
 
@@ -90,8 +89,7 @@ func (sched *Sched) run() {
 }
 
 func (sched *Sched) NewConnectioin(conn net.Conn) {
-    uconn := conn.(*net.UnixConn)
-    worker := NewWorker(sched, &unix.UnixConn{UnixConn: uconn})
+    worker := NewWorker(sched, Conn{Conn: conn})
     sched.new_worker <- worker
 }
 

@@ -3,20 +3,20 @@ package main
 import (
     "log"
     "container/list"
-    "github.com/docker/libchan/unix"
-    "github.com/docker/libchan/data"
     "huabot-sched/db"
     "strconv"
+    "bytes"
 )
+
 
 type Worker struct {
     jobs *list.List
-    conn *unix.UnixConn
+    conn Conn
     sched *Sched
 }
 
 
-func NewWorker(sched *Sched, conn *unix.UnixConn) (worker *Worker) {
+func NewWorker(sched *Sched, conn Conn) (worker *Worker) {
     worker = new(Worker)
     worker.conn = conn
     worker.jobs = list.New()
@@ -26,9 +26,7 @@ func NewWorker(sched *Sched, conn *unix.UnixConn) (worker *Worker) {
 
 
 func (worker *Worker) HandeNewConnection() {
-    var pack = data.Empty()
-    pack = pack.Set("type", "connection")
-    if err := worker.conn.Send(pack.Bytes(), nil); err != nil {
+    if err := worker.conn.Send([]byte("connection")); err != nil {
         worker.sched.die_worker <- worker
         log.Printf("Error: %s\n", err.Error())
         return
@@ -44,7 +42,7 @@ func (worker *Worker) HandleDo(job db.Job) {
         log.Printf("Error: %s\n", err.Error())
         return
     }
-    if err := worker.conn.Send(pack, nil); err != nil {
+    if err := worker.conn.Send(pack); err != nil {
         worker.sched.die_worker <- worker
         log.Printf("Error: %s\n", err.Error())
         return
@@ -70,9 +68,7 @@ func (worker *Worker) HandleFail(jobId int) {
 
 
 func (worker *Worker) HandleWaitForJob() {
-    var pack = data.Empty()
-    pack = pack.Set("workload", "wait_for_job")
-    if err := worker.conn.Send(pack.Bytes(), nil); err != nil {
+    if err := worker.conn.Send([]byte("wait_for_job")); err != nil {
         worker.sched.die_worker <- worker
         log.Printf("Error: %s\n", err.Error())
         return
@@ -89,9 +85,7 @@ func (worker *Worker) HandleSchedLater(jobId, delay int) {
 
 
 func (worker *Worker) HandleNoJob() {
-    var pack = data.Empty()
-    pack = pack.Set("workload", "no_job")
-    if err := worker.conn.Send(pack.Bytes(), nil); err != nil {
+    if err := worker.conn.Send([]byte("no_job")); err != nil {
         worker.sched.die_worker <- worker
         log.Printf("Error: %s\n", err.Error())
         return
@@ -104,51 +98,67 @@ func (worker *Worker) Handle() {
     var payload []byte
     var err error
     var conn = worker.conn
-    payload, _, err = conn.Receive()
+    payload, err = conn.Receive()
     if err != nil {
         log.Printf("Error: %s\n", err.Error())
         worker.sched.die_worker <- worker
         return
     }
-    msg := data.Message(string(payload));
-    cmd := msg.Get("cmd")
-    switch cmd[0] {
+
+    buf := bytes.NewBuffer(nil)
+    buf.WriteByte(NULL_CHAR)
+    null_char := buf.Bytes()
+
+    parts := bytes.SplitN(payload, null_char, 2)
+    cmd := string(parts[0])
+    switch cmd {
     case "ask":
         worker.sched.ask_worker <- worker
         break
     case "done":
-        jobId, _ := strconv.Atoi(msg.Get("job_handle")[0])
+        if len(parts) != 2 {
+            log.Printf("Error: invalid format.")
+            break
+        }
+        jobId, _ := strconv.Atoi(string(parts[1]))
         worker.HandleDone(jobId)
         break
     case "fail":
-        jobId, _ := strconv.Atoi(msg.Get("job_handle")[0])
+        if len(parts) != 2 {
+            log.Printf("Error: invalid format.")
+            break
+        }
+        jobId, _ := strconv.Atoi(string(parts[1]))
         worker.HandleFail(jobId)
         break
     case "sched_later":
-        jobId, _ := strconv.Atoi(msg.Get("job_handle")[0])
-        delay, _ := strconv.Atoi(msg.Get("delay")[0])
+        if len(parts) != 2 {
+            log.Printf("Error: invalid format.")
+            break
+        }
+        parts = bytes.SplitN(parts[1], null_char, 2)
+        if len(parts) != 2 {
+            log.Printf("Error: invalid format.")
+            break
+        }
+        jobId, _ := strconv.Atoi(string(parts[0]))
+        delay, _ := strconv.Atoi(string(parts[1]))
         worker.HandleSchedLater(jobId, delay)
         break
     case "sleep":
-        var pack = data.Empty()
-        pack = pack.Set("workload", "nop")
-        if err := conn.Send(pack.Bytes(), nil); err != nil {
+        if err := conn.Send([]byte("nop")); err != nil {
             log.Printf("Error: %s\n", err.Error())
         }
         go worker.Handle()
         break
     case "ping":
-        var pack = data.Empty()
-        pack = pack.Set("workload", "pong")
-        if err := conn.Send(pack.Bytes(), nil); err != nil {
+        if err := conn.Send([]byte("pong")); err != nil {
             log.Printf("Error: %s\n", err.Error())
         }
         go worker.Handle()
         break
     default:
-        var pack = data.Empty()
-        pack = pack.Set("error", "command: " + cmd[0] + "unknown")
-        if err := conn.Send(pack.Bytes(), nil); err != nil {
+        if err := conn.Send([]byte("unknown")); err != nil {
             log.Printf("Error: %s\n", err.Error())
             worker.sched.die_worker <- worker
         }
