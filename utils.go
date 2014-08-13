@@ -5,7 +5,6 @@ import (
     "net"
     "log"
     "bytes"
-    "errors"
     "strconv"
     "encoding/json"
     "container/list"
