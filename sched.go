@@ -4,6 +4,7 @@ import (
     "log"
     "net"
     "time"
+    "sync"
     "container/list"
     "huabot-sched/db"
 )
@@ -19,6 +20,7 @@ type Sched struct {
     queue *list.List
     jobQueue *list.List
     sockFile string
+    locker   *sync.Mutex
 }
 
 
@@ -33,6 +35,7 @@ func NewSched(sockFile string) *Sched {
     sched.queue = list.New()
     sched.jobQueue = list.New()
     sched.sockFile = sockFile
+    sched.locker = new(sync.Mutex)
     return sched
 }
 
@@ -96,28 +99,44 @@ func (sched *Sched) NewConnectioin(conn net.Conn) {
 
 
 func (sched *Sched) Done(jobId int) {
+    defer sched.locker.Unlock()
+    sched.locker.Lock()
     removeListJob(sched.jobQueue, jobId)
     return
 }
 
 
 func (sched *Sched) isDoJob(job db.Job) bool {
+    now := time.Now()
+    current := int(now.Unix())
+    ret := false
     for e := sched.jobQueue.Front(); e != nil; e = e.Next() {
-        if e.Value.(db.Job).Id == job.Id {
+        chk := e.Value.(db.Job)
+        if chk.Timeout > 0 && chk.SchedAt + chk.Timeout > current {
+            newJob, _ := db.GetJob(chk.Id)
+            if newJob.Status == "doing" {
+                newJob.Status = "ready"
+                newJob.Save()
+            }
+            sched.jobQueue.Remove(e)
+            continue
+        }
+        if chk.Id == job.Id {
             old := e.Value.(db.Job)
-            now := time.Now()
             if old.Timeout > 0 && old.SchedAt + old.Timeout < int(now.Unix()) {
-                return false
+                ret = false
             } else {
-                return true
+                ret = true
             }
         }
     }
-    return false
+    return ret
 }
 
 
 func (sched *Sched) SubmitJob(worker *Worker, job db.Job) {
+    defer sched.locker.Unlock()
+    sched.locker.Lock()
     job.Status = "doing"
     job.Save()
     if sched.isDoJob(job) {
@@ -165,6 +184,8 @@ func (sched *Sched) handle() {
 
 
 func (sched *Sched) Fail(jobId int) {
+    defer sched.locker.Unlock()
+    sched.locker.Lock()
     removeListJob(sched.jobQueue, jobId)
     job, _ := db.GetJob(jobId)
     job.Status = "ready"
@@ -174,6 +195,8 @@ func (sched *Sched) Fail(jobId int) {
 
 
 func (sched *Sched) SchedLater(jobId int, delay int) {
+    defer sched.locker.Unlock()
+    sched.locker.Lock()
     removeListJob(sched.jobQueue, jobId)
     job, _ := db.GetJob(jobId)
     job.Status = "ready"
