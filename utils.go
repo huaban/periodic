@@ -51,13 +51,13 @@ func removeListJob(l *list.List, jobId int) {
 }
 
 
-func makeHeader(data []byte, fds []int) ([]byte, error) {
+func makeHeader(data []byte) ([]byte, error) {
     header := make([]byte, 4)
 
     length := uint32(len(data))
 
     if length > 0x7fffffff {
-        return nil, fmt.Errorf("Data to large")
+        return nil, errors.New("Data to large")
     }
 
     header[0] = byte((length >> 24) & 0xff)
