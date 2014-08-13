@@ -1,10 +1,13 @@
 import json
 
+NULL_CHAR = b"\x01"
+
 class Job(object):
 
     def __init__(self, workload, client):
-        self.workload = json.loads(workload[0])
-        self.job_handle = str(self.workload["job_id"])
+        workload = workload.split(NULL_CHAR)
+        self.workload = json.loads(str(workload[0], "UTF-8"))
+        self.job_handle = str(workload[1], "UTF-8")
         self.client = client
 
 
@@ -17,19 +20,12 @@ class Job(object):
 
 
     def done(self):
-        yield from self.client.send({"cmd": ["done"], "job_handle": [self.job_handle]})
+        yield from self.client.send(["done", self.job_handle])
 
 
     def sched_later(self, delay):
-        yield from self.client.send({
-            "cmd": ["sched_later"],
-            "job_handle": [self.job_handle],
-            "delay": [str(delay)]
-        })
+        yield from self.client.send(["sched_later", self.job_handle,str(delay)])
 
 
     def fail(self):
-        yield from self.client.send({
-            "cmd": ["fail"],
-            "job_handle": [self.job_handle]
-        })
+        yield from self.client.send(["fail", self.job_handle])

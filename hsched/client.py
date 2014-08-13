@@ -1,6 +1,7 @@
-from . import data
 from .job import Job
 import asyncio
+
+NULL_CHAR = b"\x01"
 
 def parseHeader(head):
     length = head[0] << 24 | head[1] << 16 | head[2] << 8 | head[3]
@@ -35,14 +36,16 @@ class BaseClient(object):
         length, hasFd = parseHeader(head)
 
         payload = yield from self._reader.read(length)
-        payload = data.Decode(str(payload, 'utf-8'))
         return payload
 
 
     @asyncio.coroutine
     def send(self, payload):
-        payload = data.Encode(payload)
-        payload = bytes(payload, 'utf-8')
+        if isinstance(payload, list):
+            payload = [bytes(p, "utf-8") for p in payload]
+            payload = NULL_CHAR.join(payload)
+        elif isinstance(payload, str):
+            payload = bytes(payload, 'utf-8')
         header = makeHeader(payload)
         self._writer.write(header)
         self._writer.write(payload)
@@ -60,7 +63,7 @@ class Client(object):
         reader, writer = yield from asyncio.open_unix_connection(self._sock_file)
         self._agent = BaseClient(reader, writer)
         payload = yield from self._agent.recive()
-        if payload["type"][0] != "connection":
+        if payload!= b"connection":
             raise ConnectionError("error on connection")
 
         self.connected = True
@@ -86,17 +89,17 @@ class Client(object):
 
 
     def ping(self):
-        yield from self._agent.send({"cmd": ["ping"]})
+        yield from self._agent.send("ping")
         payload = yield from self._agent.recive()
-        if payload.get('workload') == 'pong':
+        if payload == b'pong':
             return True
         return False
 
 
     def ask(self):
-        yield from self._agent.send({"cmd": ["ask"]})
+        yield from self._agent.send("ask")
         payload = yield from self._agent.recive()
-        if payload.get("workload") == 'no_job' or payload.get("workload") == 'wait_for_job':
+        if payload == b'no_job' or payload == b'wait_for_job':
             return None
 
-        return Job(payload["workload"], self._agent)
+        return Job(payload, self._agent)
