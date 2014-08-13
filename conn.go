@@ -2,6 +2,7 @@ package main
 
 import (
     "net"
+    "errors"
 )
 
 type Conn struct {
@@ -75,7 +76,7 @@ func (conn *Conn) receive(buf []byte) (int, error) {
 }
 
 func (conn *Conn) Send(data []byte) error {
-	header, err := makeHeader(data, fds)
+	header, err := makeHeader(data)
 	if err != nil {
 		return err
 	}
