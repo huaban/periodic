@@ -4,12 +4,16 @@ import (
     "os"
     "net"
     "log"
+    "bytes"
+    "errors"
     "strconv"
     "encoding/json"
     "container/list"
     "huabot-sched/db"
-    "github.com/docker/libchan/data"
 )
+
+
+const NULL_CHAR = byte(1)
 
 
 func sockCheck(sockFile string) {
@@ -30,10 +34,10 @@ func packJob(job db.Job) ([]byte, error) {
     if err != nil {
         return nil, err
     }
-    pack := data.Empty()
-    pack = pack.Set("workload", string(jobStr))
-    pack = pack.Set("job_handle", strconv.Itoa(job.Id))
-    return pack.Bytes(), nil
+    buf := bytes.NewBuffer(jobStr)
+    buf.WriteByte(NULL_CHAR)
+    buf.WriteString(strconv.Itoa(job.Id))
+    return buf.Bytes(), nil
 }
 
 
