@@ -40,6 +40,7 @@ func NewSched(sockFile string) *Sched {
 func (sched *Sched) Serve() {
     sched.started = true
     sockCheck(sched.sockFile)
+    sched.checkJobQueue()
     go sched.run()
     go sched.handle()
     listen, err := net.Listen("unix", sched.sockFile)
@@ -188,6 +189,32 @@ func (sched *Sched) removeQueue(worker *Worker) {
         if e.Value.(*Worker) == worker {
             sched.queue.Remove(e)
         }
+    }
+}
+
+
+func (sched *Sched) checkJobQueue() {
+    start := 0
+    limit := 20
+    total, _ := db.CountSchedJob("doing")
+    updateQueue := make([]db.Job, 0)
+    var now = time.Now()
+    current := int(now.Unix())
+
+    for start = 0; start < total; start += limit {
+        jobs, _ := db.RangeSchedJob("doing", start, start + limit)
+        for _, job := range jobs {
+            if job.SchedAt + job.Timeout < current {
+                updateQueue = append(updateQueue, job)
+            } else {
+                sched.jobQueue.PushBack(job)
+            }
+        }
+    }
+
+    for _, job := range updateQueue {
+        job.Status = "ready"
+        job.Save()
     }
 }
 
