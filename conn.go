@@ -9,12 +9,32 @@ type Conn struct {
 }
 
 
-// Receive waits for a new message on conn, and receives its payload
-// and attachment, or an error if any.
-//
-// If more than 1 file descriptor is sent in the message, they are all
-// closed except for the first, which is the attachment.
-// It is legal for a message to have no attachment or an empty payload.
+func makeHeader(data []byte) ([]byte, error) {
+    header := make([]byte, 4)
+
+    length := uint32(len(data))
+
+    if length > 0x7fffffff {
+        return nil, errors.New("Data to large")
+    }
+
+    header[0] = byte((length >> 24) & 0xff)
+    header[1] = byte((length >> 16) & 0xff)
+    header[2] = byte((length >> 8) & 0xff)
+    header[3] = byte((length >> 0) & 0xff)
+
+    return header, nil
+}
+
+
+func parseHeader(header []byte) (uint32) {
+    length := uint32(header[0])<<24 | uint32(header[1])<<16 | uint32(header[2])<<8 | uint32(header[3])
+    length = length & ^uint32(0x80000000)
+
+    return length
+}
+
+
 func (conn *Conn) Receive() (rdata []byte, rerr error) {
 
 	// Read header
@@ -60,14 +80,6 @@ func (conn *Conn) Send(data []byte) error {
 		return err
 	}
 
-	// There is a bug in conn.WriteMsgUnix where it doesn't correctly return
-	// the number of bytes writte (http://code.google.com/p/go/issues/detail?id=7645)
-	// So, we can't rely on the return value from it. However, we must use it to
-	// send the fds. In order to handle this we only write one byte using WriteMsgUnix
-	// (when we have to), as that can only ever block or fully suceed. We then write
-	// the rest with conn.Write()
-	// The reader side should not rely on this though, as hopefully this gets fixed
-	// in go later.
 	written := 0
 
 	for written < len(header) {
