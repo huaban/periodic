@@ -102,6 +102,7 @@ func (sched *Sched) Done(jobId int) {
     defer sched.locker.Unlock()
     sched.locker.Lock()
     removeListJob(sched.jobQueue, jobId)
+    db.DelJob(jobId)
     return
 }
 
