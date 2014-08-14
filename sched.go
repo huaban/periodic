@@ -221,12 +221,17 @@ func (sched *Sched) checkJobQueue() {
     limit := 20
     total, _ := db.CountSchedJob("doing")
     updateQueue := make([]db.Job, 0)
+    removeQueue := make([]db.Job, 0)
     var now = time.Now()
     current := int(now.Unix())
 
     for start = 0; start < total; start += limit {
         jobs, _ := db.RangeSchedJob("doing", start, start + limit)
         for _, job := range jobs {
+            if job.Name == "" {
+                removeQueue = append(removeQueue, job)
+                continue
+            }
             if job.SchedAt + job.Timeout < current {
                 updateQueue = append(updateQueue, job)
             } else {
@@ -238,6 +243,10 @@ func (sched *Sched) checkJobQueue() {
     for _, job := range updateQueue {
         job.Status = "ready"
         job.Save()
+    }
+
+    for _, job := range removeQueue {
+        job.Delete()
     }
 }
 
