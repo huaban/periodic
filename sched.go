@@ -247,6 +247,7 @@ func (sched *Sched) checkJobQueue() {
     }
 
     for _, job := range removeQueue {
+        job.Status = "doing"
         job.Delete()
     }
 }
