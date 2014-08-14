@@ -138,6 +138,11 @@ func (sched *Sched) isDoJob(job db.Job) bool {
 func (sched *Sched) SubmitJob(worker *Worker, job db.Job) {
     defer sched.locker.Unlock()
     sched.locker.Lock()
+    if job.Name == "" {
+        job.Status = "ready"
+        job.Delete()
+        return
+    }
     job.Status = "doing"
     job.Save()
     if sched.isDoJob(job) {
