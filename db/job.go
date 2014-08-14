@@ -101,6 +101,7 @@ func RangeJob(start, stop int, rev ...bool) (jobs []Job, err error) {
 
     for k, idx := range idxs {
         job, _ :=  GetJob(idx.Score)
+        job.Id = idx.Score
         jobs[k] = job
     }
     return
@@ -116,6 +117,8 @@ func RangeSchedJob(status string, start, stop int) (jobs []Job, err error) {
     for k, idx := range idxs {
         jobId, _ := strconv.Atoi(idx.Name)
         job, _ :=  GetJob(jobId)
+        job.Id = jobId
+        job.Status = status
         jobs[k] = job
     }
     return

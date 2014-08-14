@@ -139,7 +139,6 @@ func (sched *Sched) SubmitJob(worker *Worker, job db.Job) {
     defer sched.locker.Unlock()
     sched.locker.Lock()
     if job.Name == "" {
-        job.Status = "ready"
         job.Delete()
         return
     }
@@ -252,7 +251,6 @@ func (sched *Sched) checkJobQueue() {
     }
 
     for _, job := range removeQueue {
-        job.Status = "doing"
         job.Delete()
     }
 }
