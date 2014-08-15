@@ -99,6 +99,7 @@ func (sched *Sched) NewConnectioin(conn net.Conn) {
 
 
 func (sched *Sched) Done(jobId int) {
+    defer sched.Notify()
     defer sched.locker.Unlock()
     sched.locker.Lock()
     removeListJob(sched.jobQueue, jobId)
@@ -161,8 +162,9 @@ func (sched *Sched) handle() {
             worker := e.Value.(*Worker)
             jobs, err := db.RangeSchedJob("ready", 0, 0)
             if err != nil || len(jobs) == 0 {
-                sched.queue.Remove(e)
-                go worker.HandleNoJob()
+                sched.timer.Reset(time.Minute)
+                current =<-sched.timer.C
+                continue
             }
             timestamp = int(time.Now().Unix())
             if jobs[0].SchedAt < timestamp {
@@ -184,6 +186,7 @@ func (sched *Sched) handle() {
 
 
 func (sched *Sched) Fail(jobId int) {
+    defer sched.Notify()
     defer sched.locker.Unlock()
     sched.locker.Lock()
     removeListJob(sched.jobQueue, jobId)
@@ -195,6 +198,7 @@ func (sched *Sched) Fail(jobId int) {
 
 
 func (sched *Sched) SchedLater(jobId int, delay int) {
+    defer sched.Notify()
     defer sched.locker.Unlock()
     sched.locker.Lock()
     removeListJob(sched.jobQueue, jobId)
