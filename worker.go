@@ -35,68 +35,59 @@ func (worker *Worker) HandeNewConnection() {
 }
 
 
-func (worker *Worker) HandleDo(job db.Job) {
+func (worker *Worker) HandleDo(job db.Job) (err error){
     log.Printf("HandleDo: %d\n", job.Id)
     worker.jobs.PushBack(job)
     pack, err := packJob(job)
     if err != nil {
-        log.Printf("Error: %s\n", err.Error())
-        return
+        log.Printf("Error: packJob %d %s\n", job.Id, err.Error())
+        return nil
     }
-    if err := worker.conn.Send(pack); err != nil {
-        worker.sched.die_worker <- worker
-        log.Printf("Error: %s\n", err.Error())
-        return
+    err = worker.conn.Send(pack)
+    if err != nil {
+        return err
     }
     job.Status = "doing"
     job.Save()
-    go worker.Handle()
+    return nil
 }
 
 
-func (worker *Worker) HandleDone(jobId int) {
+func (worker *Worker) HandleDone(jobId int) (err error) {
     log.Printf("HandleDone: %d\n", jobId)
     worker.sched.Done(jobId)
     removeListJob(worker.jobs, jobId)
-    go worker.Handle()
+    return nil
 }
 
 
-func (worker *Worker) HandleFail(jobId int) {
+func (worker *Worker) HandleFail(jobId int) (err error) {
     log.Printf("HandleFail: %d\n", jobId)
     worker.sched.Fail(jobId)
     removeListJob(worker.jobs, jobId)
-    go worker.Handle()
+    return nil
 }
 
 
-func (worker *Worker) HandleWaitForJob() {
+func (worker *Worker) HandleWaitForJob() (err error) {
     log.Printf("HandleWaitForJob\n")
-    if err := worker.conn.Send([]byte("wait_for_job")); err != nil {
-        worker.sched.die_worker <- worker
-        log.Printf("Error: %s\n", err.Error())
-        return
-    }
-    go worker.Handle()
+    err = worker.conn.Send([]byte("wait_for_job"))
+    return nil
 }
 
 
-func (worker *Worker) HandleSchedLater(jobId, delay int) {
+func (worker *Worker) HandleSchedLater(jobId, delay int) (err error){
     log.Printf("HandleSchedLater: %d %d\n", jobId, delay)
     worker.sched.SchedLater(jobId, delay)
     removeListJob(worker.jobs, jobId)
-    go worker.Handle()
+    return nil
 }
 
 
-func (worker *Worker) HandleNoJob() {
+func (worker *Worker) HandleNoJob() (err error){
     log.Printf("HandleNoJob\n")
-    if err := worker.conn.Send([]byte("no_job")); err != nil {
-        worker.sched.die_worker <- worker
-        log.Printf("Error: %s\n", err.Error())
-        return
-    }
-    go worker.Handle()
+    err = worker.conn.Send([]byte("no_job"))
+    return
 }
 
 
@@ -104,72 +95,69 @@ func (worker *Worker) Handle() {
     var payload []byte
     var err error
     var conn = worker.conn
-    payload, err = conn.Receive()
-    if err != nil {
-        log.Printf("Error: %s\n", err.Error())
-        worker.sched.die_worker <- worker
-        return
-    }
-
-    buf := bytes.NewBuffer(nil)
-    buf.WriteByte(NULL_CHAR)
-    null_char := buf.Bytes()
-
-    parts := bytes.SplitN(payload, null_char, 2)
-    cmd := string(parts[0])
-    switch cmd {
-    case "ask":
-        worker.sched.ask_worker <- worker
-        break
-    case "done":
-        if len(parts) != 2 {
-            log.Printf("Error: invalid format.")
-            break
-        }
-        jobId, _ := strconv.Atoi(string(parts[1]))
-        worker.HandleDone(jobId)
-        break
-    case "fail":
-        if len(parts) != 2 {
-            log.Printf("Error: invalid format.")
-            break
-        }
-        jobId, _ := strconv.Atoi(string(parts[1]))
-        worker.HandleFail(jobId)
-        break
-    case "sched_later":
-        if len(parts) != 2 {
-            log.Printf("Error: invalid format.")
-            break
-        }
-        parts = bytes.SplitN(parts[1], null_char, 2)
-        if len(parts) != 2 {
-            log.Printf("Error: invalid format.")
-            break
-        }
-        jobId, _ := strconv.Atoi(string(parts[0]))
-        delay, _ := strconv.Atoi(string(parts[1]))
-        worker.HandleSchedLater(jobId, delay)
-        break
-    case "sleep":
-        if err := conn.Send([]byte("nop")); err != nil {
-            log.Printf("Error: %s\n", err.Error())
-        }
-        go worker.Handle()
-        break
-    case "ping":
-        if err := conn.Send([]byte("pong")); err != nil {
-            log.Printf("Error: %s\n", err.Error())
-        }
-        go worker.Handle()
-        break
-    default:
-        if err := conn.Send([]byte("unknown")); err != nil {
+    for {
+        payload, err = conn.Receive()
+        if err != nil {
             log.Printf("Error: %s\n", err.Error())
             worker.sched.die_worker <- worker
+            return
         }
-        go worker.Handle()
-        break
+
+        buf := bytes.NewBuffer(nil)
+        buf.WriteByte(NULL_CHAR)
+        null_char := buf.Bytes()
+
+        parts := bytes.SplitN(payload, null_char, 2)
+        cmd := string(parts[0])
+        switch cmd {
+        case "ask":
+            worker.sched.ask_worker <- worker
+            break
+        case "done":
+            if len(parts) != 2 {
+                log.Printf("Error: invalid format.")
+                break
+            }
+            jobId, _ := strconv.Atoi(string(parts[1]))
+            err = worker.HandleDone(jobId)
+            break
+        case "fail":
+            if len(parts) != 2 {
+                log.Printf("Error: invalid format.")
+                break
+            }
+            jobId, _ := strconv.Atoi(string(parts[1]))
+            err = worker.HandleFail(jobId)
+            break
+        case "sched_later":
+            if len(parts) != 2 {
+                log.Printf("Error: invalid format.")
+                break
+            }
+            parts = bytes.SplitN(parts[1], null_char, 2)
+            if len(parts) != 2 {
+                log.Printf("Error: invalid format.")
+                break
+            }
+            jobId, _ := strconv.Atoi(string(parts[0]))
+            delay, _ := strconv.Atoi(string(parts[1]))
+            err = worker.HandleSchedLater(jobId, delay)
+            break
+        case "sleep":
+            err = conn.Send([]byte("nop"))
+            break
+        case "ping":
+            err = conn.Send([]byte("pong"))
+            break
+        default:
+            err = conn.Send([]byte("unknown"))
+            break
+        }
+        if err != nil {
+            log.Printf("Error: %s\n", err.Error())
+            worker.sched.die_worker <- worker
+            return
+        }
     }
 }
 

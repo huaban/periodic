@@ -150,7 +150,9 @@ func (sched *Sched) SubmitJob(worker *Worker, job db.Job) {
     }
     sched.removeQueue(worker)
     sched.jobQueue.PushBack(job)
-    go worker.HandleDo(job)
+    if err := worker.HandleDo(job); err != nil {
+        sched.die_worker <- worker
+    }
 }
 
 
