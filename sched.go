@@ -160,14 +160,9 @@ func (sched *Sched) handle() {
         for e := sched.queue.Front(); e != nil; e = e.Next() {
             worker := e.Value.(*Worker)
             jobs, err := db.RangeSchedJob("ready", 0, 0)
-            if err != nil {
+            if err != nil || len(jobs) == 0 {
                 sched.queue.Remove(e)
                 go worker.HandleNoJob()
-            }
-            if len(jobs) == 0 {
-                sched.timer.Reset(time.Minute)
-                current =<-sched.timer.C
-                continue
             }
             timestamp = int(time.Now().Unix())
             if jobs[0].SchedAt < timestamp {
