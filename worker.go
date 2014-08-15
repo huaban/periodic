@@ -36,6 +36,7 @@ func (worker *Worker) HandeNewConnection() {
 
 
 func (worker *Worker) HandleDo(job db.Job) {
+    log.Printf("HandleDo: %d\n", job.Id)
     worker.jobs.PushBack(job)
     pack, err := packJob(job)
     if err != nil {
@@ -54,6 +55,7 @@ func (worker *Worker) HandleDo(job db.Job) {
 
 
 func (worker *Worker) HandleDone(jobId int) {
+    log.Printf("HandleDone: %d\n", jobId)
     worker.sched.Done(jobId)
     removeListJob(worker.jobs, jobId)
     go worker.Handle()
@@ -61,6 +63,7 @@ func (worker *Worker) HandleDone(jobId int) {
 
 
 func (worker *Worker) HandleFail(jobId int) {
+    log.Printf("HandleFail: %d\n", jobId)
     worker.sched.Fail(jobId)
     removeListJob(worker.jobs, jobId)
     go worker.Handle()
@@ -68,6 +71,7 @@ func (worker *Worker) HandleFail(jobId int) {
 
 
 func (worker *Worker) HandleWaitForJob() {
+    log.Printf("HandleWaitForJob\n")
     if err := worker.conn.Send([]byte("wait_for_job")); err != nil {
         worker.sched.die_worker <- worker
         log.Printf("Error: %s\n", err.Error())
@@ -78,6 +82,7 @@ func (worker *Worker) HandleWaitForJob() {
 
 
 func (worker *Worker) HandleSchedLater(jobId, delay int) {
+    log.Printf("HandleSchedLater: %d %d\n", jobId, delay)
     worker.sched.SchedLater(jobId, delay)
     removeListJob(worker.jobs, jobId)
     go worker.Handle()
@@ -85,6 +90,7 @@ func (worker *Worker) HandleSchedLater(jobId, delay int) {
 
 
 func (worker *Worker) HandleNoJob() {
+    log.Printf("HandleNoJob\n")
     if err := worker.conn.Send([]byte("no_job")); err != nil {
         worker.sched.die_worker <- worker
         log.Printf("Error: %s\n", err.Error())
