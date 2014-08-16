@@ -11,7 +11,6 @@ import (
 
 
 type Sched struct {
-    new_worker chan *Worker
     ask_worker chan *Worker
     die_worker chan *Worker
     started bool
@@ -27,7 +26,6 @@ type Sched struct {
 func NewSched(sockFile string) *Sched {
     sched = new(Sched)
     sched.started = false
-    sched.new_worker = make(chan *Worker, 1)
     sched.ask_worker = make(chan *Worker, 1)
     sched.die_worker = make(chan *Worker, 1)
     sched.worker_count = 0
@@ -71,11 +69,6 @@ func (sched *Sched) run() {
     var worker *Worker
     for {
         select {
-        case worker = <-sched.new_worker:
-            sched.worker_count += 1
-            log.Printf("worker_count: %d\n", sched.worker_count)
-            go worker.HandeNewConnection()
-            break
         case worker =<-sched.ask_worker:
             sched.queue.PushBack(worker)
             sched.Notify()
@@ -94,7 +87,9 @@ func (sched *Sched) run() {
 
 func (sched *Sched) NewConnection(conn net.Conn) {
     worker := NewWorker(sched, Conn{Conn: conn})
-    sched.new_worker <- worker
+    sched.worker_count += 1
+    log.Printf("worker_count: %d\n", sched.worker_count)
+    go worker.Handle()
 }
 
 

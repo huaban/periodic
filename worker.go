@@ -27,11 +27,6 @@ func NewWorker(sched *Sched, conn Conn) (worker *Worker) {
 }
 
 
-func (worker *Worker) HandeNewConnection() {
-    go worker.Handle()
-}
-
-
 func (worker *Worker) HandleDo(job db.Job) (err error){
     log.Printf("HandleDo: %d\n", job.Id)
     worker.jobs.PushBack(job)
