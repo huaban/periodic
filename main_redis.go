@@ -1,3 +1,5 @@
+// +build !ledis
+
 package main
 
 import (
