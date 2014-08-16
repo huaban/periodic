@@ -2,8 +2,9 @@ package db
 
 
 import (
-    "errors"
+    "log"
     "fmt"
+    "errors"
     "strconv"
 )
 
@@ -29,10 +30,14 @@ func (job *Job) Save() (err error) {
             return
         }
         if old.Name != job.Name {
-            DelIndex(tableName + ":name", old.Name)
+            if e := DelIndex(tableName + ":name", old.Name); e != nil {
+                log.Printf("DelIndex Error: %s %s\n", tableName + ":name", old.Name)
+            }
         }
         if old.Status != job.Status {
-            DelIndex(tableName + ":" + old.Status + ":sched", strconv.Itoa(job.Id))
+            if e := DelIndex(tableName + ":" + old.Status + ":sched", strconv.Itoa(job.Id)); e != nil {
+                log.Printf("DelIndex Error: %s %d\n", tableName + ":" + old.Status + ":sched", old.Id)
+            }
         }
     } else {
         job.Id, err = NextSequence(tableName)
@@ -48,9 +53,15 @@ func (job *Job) Save() (err error) {
     key = tableName + ":" + strconv.Itoa(job.Id)
     err = SetObject(key, job)
     if err == nil {
-        AddIndex(tableName, strconv.Itoa(job.Id), job.Id)
-        AddIndex(tableName + ":" + job.Status + ":sched", strconv.Itoa(job.Id), job.SchedAt)
-        AddIndex(tableName + ":name", job.Name, job.Id)
+        if e := AddIndex(tableName, strconv.Itoa(job.Id), job.Id); e != nil {
+            log.Printf("AddIndex Error: %s %d\n", tableName, job.Id)
+        }
+        if e := AddIndex(tableName + ":" + job.Status + ":sched", strconv.Itoa(job.Id), job.SchedAt); e != nil {
+            log.Printf("AddIndex Error: %s %d\n", tableName + ":" + job.Status + ":sched", job.Id)
+        }
+        if e := AddIndex(tableName + ":name", job.Name, job.Id); e != nil {
+            log.Printf("DelIndex Error: %s %s\n", tableName + ":name", job.Name)
+        }
     }
     return
 }
