@@ -13,7 +13,7 @@ import (
 type Sched struct {
     workerCount int
     timer *time.Timer
-    queue *list.List
+    grabQueue *list.List
     jobQueue *list.List
     sockFile string
     locker   *sync.Mutex
@@ -24,7 +24,7 @@ func NewSched(sockFile string) *Sched {
     sched = new(Sched)
     sched.workerCount = 0
     sched.timer = time.NewTimer(1 * time.Hour)
-    sched.queue = list.New()
+    sched.grabQueue = list.New()
     sched.jobQueue = list.New()
     sched.sockFile = sockFile
     sched.locker = new(sync.Mutex)
@@ -62,7 +62,7 @@ func (sched *Sched) DieWorker(worker *Worker) {
     defer sched.locker.Unlock()
     sched.workerCount -= 1
     log.Printf("Total worker: %d\n", sched.workerCount)
-    sched.removeQueue(worker)
+    sched.removeGrabQueue(worker)
     worker.Close()
 }
 
@@ -133,7 +133,7 @@ func (sched *Sched) SubmitJob(worker *Worker, job db.Job) {
     job.Status = "doing"
     job.Save()
     sched.jobQueue.PushBack(job)
-    sched.removeQueue(worker)
+    sched.removeGrabQueue(worker)
 }
 
 
@@ -141,7 +141,7 @@ func (sched *Sched) handle() {
     var current time.Time
     var timestamp int
     for {
-        for e := sched.queue.Front(); e != nil; e = e.Next() {
+        for e := sched.grabQueue.Front(); e != nil; e = e.Next() {
             worker := e.Value.(*Worker)
             jobs, err := db.RangeSchedJob("ready", 0, 0)
             if err != nil || len(jobs) == 0 {
@@ -161,7 +161,7 @@ func (sched *Sched) handle() {
                 }
             }
         }
-        if sched.queue.Len() == 0 {
+        if sched.grabQueue.Len() == 0 {
             sched.timer.Reset(time.Minute)
             current =<-sched.timer.C
         }
@@ -195,10 +195,10 @@ func (sched *Sched) SchedLater(jobId int, delay int) {
 }
 
 
-func (sched *Sched) removeQueue(worker *Worker) {
-    for e := sched.queue.Front(); e != nil; e = e.Next() {
+func (sched *Sched) removeGrabQueue(worker *Worker) {
+    for e := sched.grabQueue.Front(); e != nil; e = e.Next() {
         if e.Value.(*Worker) == worker {
-            sched.queue.Remove(e)
+            sched.grabQueue.Remove(e)
         }
     }
 }

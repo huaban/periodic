@@ -85,7 +85,7 @@ func (worker *Worker) HandleNoJob() (err error){
 
 func (worker *Worker) HandleGrabJob() (err error){
     log.Printf("HandleGrabJob\n")
-    worker.sched.queue.PushBack(worker)
+    worker.sched.grabQueue.PushBack(worker)
     worker.sched.Notify()
     return nil
 }
