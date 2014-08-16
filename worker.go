@@ -27,6 +27,11 @@ func NewWorker(sched *Sched, conn Conn) (worker *Worker) {
 }
 
 
+func (worker *Worker) IsAlive() bool {
+    return worker.alive
+}
+
+
 func (worker *Worker) HandleDo(job db.Job) (err error){
     log.Printf("HandleDo: %d\n", job.Id)
     worker.jobQueue.PushBack(job)
