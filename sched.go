@@ -11,7 +11,6 @@ import (
 
 
 type Sched struct {
-    started bool
     worker_count int
     timer *time.Timer
     queue *list.List
@@ -23,7 +22,6 @@ type Sched struct {
 
 func NewSched(sockFile string) *Sched {
     sched = new(Sched)
-    sched.started = false
     sched.worker_count = 0
     sched.timer = time.NewTimer(1 * time.Hour)
     sched.queue = list.New()
@@ -35,7 +33,6 @@ func NewSched(sockFile string) *Sched {
 
 
 func (sched *Sched) Serve() {
-    sched.started = true
     sockCheck(sched.sockFile)
     sched.checkJobQueue()
     go sched.handle()
