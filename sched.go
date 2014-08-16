@@ -181,6 +181,7 @@ func (sched *Sched) handle() {
             }
         }
         if sched.queue.Len() == 0 {
+            sched.timer.Reset(time.Minute)
             current =<-sched.timer.C
         }
     }
