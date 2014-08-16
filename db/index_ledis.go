@@ -25,7 +25,7 @@ func RangeIndex(name string, start, stop int, rev ...bool) (retval []Index, err 
     if len(rev) > 0 && rev[0] {
         scorepairs, err = db.ZRevRange([]byte(key), start, stop)
     } else {
-        scorepairs, err = db.Range([]byte(key), start, stop)
+        scorepairs, err = db.ZRange([]byte(key), start, stop)
     }
     if err != nil {
         return

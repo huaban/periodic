@@ -3,7 +3,6 @@
 package db
 
 import (
-    "github.com/siddontang/ledisdb/ledis"
     "encoding/json"
 )
 
@@ -29,7 +28,7 @@ func SetObject(key string, obj interface{}) (err error) {
 }
 
 func DelObject(key string) (err error) {
-    err = db.Del([]byte(key))
+    _, err = db.Del([]byte(key))
     return
 }
 
