@@ -99,7 +99,7 @@ func (worker *Worker) Handle() {
         payload, err = conn.Receive()
         if err != nil {
             log.Printf("Error: %s\n", err.Error())
-            worker.sched.die_worker <- worker
+            worker.sched.DieWorker(worker)
             return
         }
 
@@ -156,7 +156,7 @@ func (worker *Worker) Handle() {
         if err != nil {
             log.Printf("Error: %s\n", err.Error())
             worker.alive = false
-            worker.sched.die_worker <- worker
+            worker.sched.DieWorker(worker)
             return
         }
 

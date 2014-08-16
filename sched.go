@@ -11,7 +11,6 @@ import (
 
 
 type Sched struct {
-    die_worker chan *Worker
     started bool
     worker_count int
     timer *time.Timer
@@ -25,7 +24,6 @@ type Sched struct {
 func NewSched(sockFile string) *Sched {
     sched = new(Sched)
     sched.started = false
-    sched.die_worker = make(chan *Worker, 1)
     sched.worker_count = 0
     sched.timer = time.NewTimer(1 * time.Hour)
     sched.queue = list.New()
@@ -40,7 +38,6 @@ func (sched *Sched) Serve() {
     sched.started = true
     sockCheck(sched.sockFile)
     sched.checkJobQueue()
-    go sched.run()
     go sched.handle()
     listen, err := net.Listen("unix", sched.sockFile)
     if err != nil {
@@ -63,20 +60,13 @@ func (sched *Sched) Notify() {
 }
 
 
-func (sched *Sched) run() {
-    var worker *Worker
-    for {
-        select {
-        case worker =<-sched.die_worker:
-            sched.worker_count -= 1
-            log.Printf("worker_count: %d\n", sched.worker_count)
-            sched.removeQueue(worker)
-            sched.Notify()
-            worker.Close()
-            break
-        }
-    }
-    sched.started = false
+func (sched *Sched) DieWorker(worker *Worker) {
+    defer sched.Notify()
+    defer sched.locker.Unlock()
+    sched.worker_count -= 1
+    log.Printf("worker_count: %d\n", sched.worker_count)
+    sched.removeQueue(worker)
+    worker.Close()
 }
 
 func (sched *Sched) HandleConnection(conn net.Conn) {
@@ -140,7 +130,7 @@ func (sched *Sched) SubmitJob(worker *Worker, job db.Job) {
     }
     if err := worker.HandleDo(job); err != nil {
         worker.alive = false
-        sched.die_worker <- worker
+        sched.DieWorker(worker)
         return
     }
     job.Status = "doing"
