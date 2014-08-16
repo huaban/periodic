@@ -143,16 +143,21 @@ func (sched *Sched) SubmitJob(worker *Worker, job db.Job) {
         job.Delete()
         return
     }
-    job.Status = "doing"
-    job.Save()
     if sched.isDoJob(job) {
         return
     }
-    sched.removeQueue(worker)
-    sched.jobQueue.PushBack(job)
-    if err := worker.HandleDo(job); err != nil {
-        sched.die_worker <- worker
+    if !worker.alive {
+        return
     }
+    if err := worker.HandleDo(job); err != nil {
+        worker.alive = false
+        sched.die_worker <- worker
+        return
+    }
+    job.Status = "doing"
+    job.Save()
+    sched.jobQueue.PushBack(job)
+    sched.removeQueue(worker)
 }
 
 

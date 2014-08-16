@@ -13,6 +13,7 @@ type Worker struct {
     jobs *list.List
     conn Conn
     sched *Sched
+    alive bool
 }
 
 
@@ -21,12 +22,14 @@ func NewWorker(sched *Sched, conn Conn) (worker *Worker) {
     worker.conn = conn
     worker.jobs = list.New()
     worker.sched = sched
+    worker.alive = true
     return
 }
 
 
 func (worker *Worker) HandeNewConnection() {
     if err := worker.conn.Send([]byte("connection")); err != nil {
+        worker.alive = false
         worker.sched.die_worker <- worker
         log.Printf("Error: %s\n", err.Error())
         return
@@ -155,8 +158,13 @@ func (worker *Worker) Handle() {
         }
         if err != nil {
             log.Printf("Error: %s\n", err.Error())
+            worker.alive = false
             worker.sched.die_worker <- worker
             return
+        }
+
+        if !worker.alive {
+            break
         }
     }
 }
