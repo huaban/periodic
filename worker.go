@@ -10,7 +10,7 @@ import (
 
 
 type Worker struct {
-    jobs *list.List
+    jobQueue *list.List
     conn Conn
     sched *Sched
     alive bool
@@ -20,7 +20,7 @@ type Worker struct {
 func NewWorker(sched *Sched, conn Conn) (worker *Worker) {
     worker = new(Worker)
     worker.conn = conn
-    worker.jobs = list.New()
+    worker.jobQueue = list.New()
     worker.sched = sched
     worker.alive = true
     return
@@ -29,7 +29,7 @@ func NewWorker(sched *Sched, conn Conn) (worker *Worker) {
 
 func (worker *Worker) HandleDo(job db.Job) (err error){
     log.Printf("HandleDo: %d\n", job.Id)
-    worker.jobs.PushBack(job)
+    worker.jobQueue.PushBack(job)
     pack, err := packJob(job)
     if err != nil {
         log.Printf("Error: packJob %d %s\n", job.Id, err.Error())
@@ -48,7 +48,7 @@ func (worker *Worker) HandleDo(job db.Job) (err error){
 func (worker *Worker) HandleDone(jobId int) (err error) {
     log.Printf("HandleDone: %d\n", jobId)
     worker.sched.Done(jobId)
-    removeListJob(worker.jobs, jobId)
+    removeListJob(worker.jobQueue, jobId)
     return nil
 }
 
@@ -56,7 +56,7 @@ func (worker *Worker) HandleDone(jobId int) (err error) {
 func (worker *Worker) HandleFail(jobId int) (err error) {
     log.Printf("HandleFail: %d\n", jobId)
     worker.sched.Fail(jobId)
-    removeListJob(worker.jobs, jobId)
+    removeListJob(worker.jobQueue, jobId)
     return nil
 }
 
@@ -71,7 +71,7 @@ func (worker *Worker) HandleWaitForJob() (err error) {
 func (worker *Worker) HandleSchedLater(jobId, delay int) (err error){
     log.Printf("HandleSchedLater: %d %d\n", jobId, delay)
     worker.sched.SchedLater(jobId, delay)
-    removeListJob(worker.jobs, jobId)
+    removeListJob(worker.jobQueue, jobId)
     return nil
 }
 
@@ -169,7 +169,7 @@ func (worker *Worker) Handle() {
 
 func (worker *Worker) Close() {
     worker.conn.Close()
-    for e := worker.jobs.Front(); e != nil; e = e.Next() {
+    for e := worker.jobQueue.Front(); e != nil; e = e.Next() {
         worker.sched.Fail(e.Value.(db.Job).Id)
     }
 }
