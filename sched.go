@@ -57,11 +57,7 @@ func (sched *Sched) Notify() {
 }
 
 
-func (sched *Sched) DieWorker(worker *Worker, lock... bool) {
-    if len(lock) == 0 || lock[0] {
-        defer sched.locker.Unlock()
-        sched.locker.Lock()
-    }
+func (sched *Sched) DieWorker(worker *Worker) {
     defer sched.Notify()
     sched.workerCount -= 1
     log.Printf("Total worker: %d\n", sched.workerCount)
@@ -130,7 +126,7 @@ func (sched *Sched) SubmitJob(worker *Worker, job db.Job) {
     }
     if err := worker.HandleDo(job); err != nil {
         worker.alive = false
-        sched.DieWorker(worker, false)
+        sched.DieWorker(worker)
         return
     }
     job.Status = "doing"
