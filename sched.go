@@ -57,9 +57,12 @@ func (sched *Sched) Notify() {
 }
 
 
-func (sched *Sched) DieWorker(worker *Worker) {
+func (sched *Sched) DieWorker(worker *Worker, lock... bool) {
+    if len(lock) == 0 || lock[0] {
+        defer sched.locker.Unlock()
+        sched.locker.Lock()
+    }
     defer sched.Notify()
-    defer sched.locker.Unlock()
     sched.workerCount -= 1
     log.Printf("Total worker: %d\n", sched.workerCount)
     sched.removeGrabQueue(worker)
@@ -127,7 +130,7 @@ func (sched *Sched) SubmitJob(worker *Worker, job db.Job) {
     }
     if err := worker.HandleDo(job); err != nil {
         worker.alive = false
-        sched.DieWorker(worker)
+        sched.DieWorker(worker, false)
         return
     }
     job.Status = "doing"
