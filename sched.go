@@ -55,7 +55,7 @@ func (sched *Sched) Serve() {
         if err != nil {
             log.Fatal(err)
         }
-        sched.NewConnection(conn)
+        sched.HandleConnection(conn)
     }
 }
 
@@ -85,7 +85,7 @@ func (sched *Sched) run() {
     sched.started = false
 }
 
-func (sched *Sched) NewConnection(conn net.Conn) {
+func (sched *Sched) HandleConnection(conn net.Conn) {
     worker := NewWorker(sched, Conn{Conn: conn})
     sched.worker_count += 1
     log.Printf("worker_count: %d\n", sched.worker_count)
