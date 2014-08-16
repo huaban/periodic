@@ -11,7 +11,6 @@ import (
 
 
 type Sched struct {
-    ask_worker chan *Worker
     die_worker chan *Worker
     started bool
     worker_count int
@@ -26,7 +25,6 @@ type Sched struct {
 func NewSched(sockFile string) *Sched {
     sched = new(Sched)
     sched.started = false
-    sched.ask_worker = make(chan *Worker, 1)
     sched.die_worker = make(chan *Worker, 1)
     sched.worker_count = 0
     sched.timer = time.NewTimer(1 * time.Hour)
@@ -69,10 +67,6 @@ func (sched *Sched) run() {
     var worker *Worker
     for {
         select {
-        case worker =<-sched.ask_worker:
-            sched.queue.PushBack(worker)
-            sched.Notify()
-            break
         case worker =<-sched.die_worker:
             sched.worker_count -= 1
             log.Printf("worker_count: %d\n", sched.worker_count)

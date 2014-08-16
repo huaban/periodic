@@ -83,6 +83,14 @@ func (worker *Worker) HandleNoJob() (err error){
 }
 
 
+func (worker *Worker) HandleGrabJob() (err error){
+    log.Printf("HandleGrabJob\n")
+    worker.sched.queue.PushBack(worker)
+    worker.sched.Notify()
+    return nil
+}
+
+
 func (worker *Worker) Handle() {
     var payload []byte
     var err error
@@ -102,8 +110,8 @@ func (worker *Worker) Handle() {
         parts := bytes.SplitN(payload, null_char, 2)
         cmd := string(parts[0])
         switch cmd {
-        case "ask":
-            worker.sched.ask_worker <- worker
+        case "grab":
+            err = worker.HandleGrabJob()
             break
         case "done":
             if len(parts) != 2 {

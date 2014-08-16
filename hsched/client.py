@@ -92,8 +92,8 @@ class Client(object):
         return False
 
 
-    def ask(self):
-        yield from self._agent.send("ask")
+    def grabJob(self):
+        yield from self._agent.send("grab")
         payload = yield from self._agent.recive()
         if payload == b'no_job' or payload == b'wait_for_job':
             return None
