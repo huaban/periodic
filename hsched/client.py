@@ -62,10 +62,6 @@ class Client(object):
     def _connect(self):
         reader, writer = yield from asyncio.open_unix_connection(self._sock_file)
         self._agent = BaseClient(reader, writer)
-        payload = yield from self._agent.recive()
-        if payload!= b"connection":
-            raise ConnectionError("error on connection")
-
         self.connected = True
         return True
 

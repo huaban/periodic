@@ -28,12 +28,6 @@ func NewWorker(sched *Sched, conn Conn) (worker *Worker) {
 
 
 func (worker *Worker) HandeNewConnection() {
-    if err := worker.conn.Send([]byte("connection")); err != nil {
-        worker.alive = false
-        worker.sched.die_worker <- worker
-        log.Printf("Error: %s\n", err.Error())
-        return
-    }
     go worker.Handle()
 }
 
