@@ -57,7 +57,7 @@ func (sched *Sched) Serve() {
         if err != nil {
             log.Fatal(err)
         }
-        sched.NewConnectioin(conn)
+        sched.NewConnection(conn)
     }
 }
 
@@ -92,7 +92,7 @@ func (sched *Sched) run() {
     sched.started = false
 }
 
-func (sched *Sched) NewConnectioin(conn net.Conn) {
+func (sched *Sched) NewConnection(conn net.Conn) {
     worker := NewWorker(sched, Conn{Conn: conn})
     sched.new_worker <- worker
 }
