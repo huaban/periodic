@@ -56,6 +56,10 @@ class BaseClient(object):
             yield from self._writer.drain()
 
 
+    def close(self):
+        self._writer.close()
+
+
 class Client(object):
     def __init__(self):
         self._agent = None
@@ -65,6 +69,11 @@ class Client(object):
 
     def _connect(self):
         reader, writer = yield from asyncio.open_unix_connection(self._sock_file)
+        if self._agent:
+            try:
+                self._agent.close()
+            except Exception:
+                pass
         self._agent = BaseClient(reader, writer)
         self.connected = True
         return True
