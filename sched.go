@@ -11,7 +11,7 @@ import (
 
 
 type Sched struct {
-    workerCount int
+    TotalWorkerCount int
     timer *time.Timer
     grabQueue *list.List
     jobQueue *list.List
@@ -22,7 +22,7 @@ type Sched struct {
 
 func NewSched(sockFile string) *Sched {
     sched = new(Sched)
-    sched.workerCount = 0
+    sched.TotalWorkerCount = 0
     sched.timer = time.NewTimer(1 * time.Hour)
     sched.grabQueue = list.New()
     sched.jobQueue = list.New()
@@ -59,16 +59,16 @@ func (sched *Sched) Notify() {
 
 func (sched *Sched) DieWorker(worker *Worker) {
     defer sched.Notify()
-    sched.workerCount -= 1
-    log.Printf("Total worker: %d\n", sched.workerCount)
+    sched.TotalWorkerCount -= 1
+    log.Printf("Total worker: %d\n", sched.TotalWorkerCount)
     sched.removeGrabQueue(worker)
     worker.Close()
 }
 
 func (sched *Sched) HandleConnection(conn net.Conn) {
     worker := NewWorker(sched, Conn{Conn: conn})
-    sched.workerCount += 1
-    log.Printf("Total worker: %d\n", sched.workerCount)
+    sched.TotalWorkerCount += 1
+    log.Printf("Total worker: %d\n", sched.TotalWorkerCount)
     go worker.Handle()
 }
 
