@@ -7,16 +7,16 @@ import (
 )
 
 
-func AddIndex(name, member string, score int) (err error) {
+func AddIndex(name, member string, score int64) (err error) {
     var key = "index:" + name
-    _, err = db.ZAdd([]byte(key), ledis.ScorePair{int64(score), []byte(member)})
+    _, err = db.ZAdd([]byte(key), ledis.ScorePair{score, []byte(member)})
     return
 }
 
-func GetIndex(name, member string) (score int, err error) {
+func GetIndex(name, member string) (score int64, err error) {
     var key = "index:" + name
-    score1, err := db.ZScore([]byte(key), []byte(name))
-    return int(score1), err
+    score, err = db.ZScore([]byte(key), []byte(name))
+    return
 }
 
 func RangeIndex(name string, start, stop int, rev ...bool) (retval []Index, err error) {
@@ -32,15 +32,15 @@ func RangeIndex(name string, start, stop int, rev ...bool) (retval []Index, err 
     }
     retval = make([]Index, len(scorepairs))
     for k, scorepair := range scorepairs {
-        retval[k] = Index{Name: string(scorepair.Member), Score: int(scorepair.Score),}
+        retval[k] = Index{Name: string(scorepair.Member), Score: scorepair.Score,}
     }
     return
 }
 
-func CountIndex(name string) (count int, err error) {
+func CountIndex(name string) (count int64, err error) {
     var key = "index:" + name
-    count1, err := db.ZCard([]byte(key))
-    return int(count1), err
+    count, err = db.ZCard([]byte(key))
+    return
 }
 
 func DropIndex(name string) (err error) {

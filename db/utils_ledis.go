@@ -32,7 +32,7 @@ func DelObject(key string) (err error) {
     return
 }
 
-func NextSequence(name string) (val int, err error) {
-    v, err := db.Incr([]byte("sequence:" + name))
-    return int(v), err
+func NextSequence(name string) (val int64, err error) {
+    val, err = db.Incr([]byte("sequence:" + name))
+    return
 }

@@ -73,7 +73,7 @@ func (sched *Sched) HandleConnection(conn net.Conn) {
 }
 
 
-func (sched *Sched) Done(jobId int) {
+func (sched *Sched) Done(jobId int64) {
     defer sched.Notify()
     defer sched.JobLocker.Unlock()
     sched.JobLocker.Lock()
@@ -85,7 +85,7 @@ func (sched *Sched) Done(jobId int) {
 
 func (sched *Sched) isDoJob(job db.Job) bool {
     now := time.Now()
-    current := int(now.Unix())
+    current := int64(now.Unix())
     ret := false
     for e := sched.jobQueue.Front(); e != nil; e = e.Next() {
         chk := e.Value.(db.Job)
@@ -100,7 +100,7 @@ func (sched *Sched) isDoJob(job db.Job) bool {
         }
         if chk.Id == job.Id {
             old := e.Value.(db.Job)
-            if old.Timeout > 0 && old.SchedAt + old.Timeout < int(now.Unix()) {
+            if old.Timeout > 0 && old.SchedAt + old.Timeout < current {
                 ret = false
             } else {
                 ret = true
@@ -138,7 +138,7 @@ func (sched *Sched) SubmitJob(worker *Worker, job db.Job) {
 
 func (sched *Sched) handle() {
     var current time.Time
-    var timestamp int
+    var timestamp int64
     for {
         for e := sched.grabQueue.Front(); e != nil; e = e.Next() {
             worker := e.Value.(*Worker)
@@ -148,13 +148,13 @@ func (sched *Sched) handle() {
                 current =<-sched.timer.C
                 continue
             }
-            timestamp = int(time.Now().Unix())
+            timestamp = int64(time.Now().Unix())
             if jobs[0].SchedAt < timestamp {
                 sched.SubmitJob(worker, jobs[0])
             } else {
                 sched.timer.Reset(time.Second * time.Duration(jobs[0].SchedAt - timestamp))
                 current =<-sched.timer.C
-                timestamp = int(current.Unix())
+                timestamp = int64(current.Unix())
                 if jobs[0].SchedAt <= timestamp {
                     sched.SubmitJob(worker, jobs[0])
                 }
@@ -168,7 +168,7 @@ func (sched *Sched) handle() {
 }
 
 
-func (sched *Sched) Fail(jobId int) {
+func (sched *Sched) Fail(jobId int64) {
     defer sched.Notify()
     defer sched.JobLocker.Unlock()
     sched.JobLocker.Lock()
@@ -180,7 +180,7 @@ func (sched *Sched) Fail(jobId int) {
 }
 
 
-func (sched *Sched) SchedLater(jobId int, delay int) {
+func (sched *Sched) SchedLater(jobId int64, delay int64) {
     defer sched.Notify()
     defer sched.JobLocker.Unlock()
     sched.JobLocker.Lock()
@@ -188,7 +188,7 @@ func (sched *Sched) SchedLater(jobId int, delay int) {
     job, _ := db.GetJob(jobId)
     job.Status = "ready"
     var now = time.Now()
-    job.SchedAt = int(now.Unix()) + delay
+    job.SchedAt = int64(now.Unix()) + delay
     job.Save()
     return
 }
@@ -210,9 +210,9 @@ func (sched *Sched) checkJobQueue() {
     updateQueue := make([]db.Job, 0)
     removeQueue := make([]db.Job, 0)
     var now = time.Now()
-    current := int(now.Unix())
+    current := int64(now.Unix())
 
-    for start = 0; start < total; start += limit {
+    for start = 0; start < int(total); start += limit {
         jobs, _ := db.RangeSchedJob("doing", start, start + limit)
         for _, job := range jobs {
             if job.Name == "" {

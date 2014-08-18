@@ -35,8 +35,8 @@ func StartHttpServer(addr string, sched *Sched) {
 
 type JobForm struct {
     Name    string `form:"name" binding:"required"`
-    Timeout int    `form:"timeout"`
-    SchedAt int    `form:"sched_at" binding:"required"`
+    Timeout int64  `form:"timeout"`
+    SchedAt int64  `form:"sched_at" binding:"required"`
 }
 
 
@@ -76,7 +76,7 @@ func api(mart *martini.ClassicMartini, sched *Sched) {
         }
         stop = start + limit
         var jobs []db.Job
-        var count int
+        var count int64
         jobs, err = db.RangeSchedJob(status, start, stop)
         count, _ = db.CountSchedJob(status)
         if err != nil {
@@ -92,11 +92,11 @@ func api(mart *martini.ClassicMartini, sched *Sched) {
             func(params martini.Params, req *http.Request, r render.Render) {
         qs := req.URL.Query()
         id := params["job_id"]
-        var jobId int
+        var jobId int64
         if qs.Get("id_type") == "name" {
             jobId, _ = db.GetIndex("job:name", id)
         } else {
-            jobId, _ = strconv.Atoi(id)
+            jobId, _ = strconv.ParseInt(id, 10 ,0)
         }
         job, err := db.GetJob(jobId)
         if err != nil {
@@ -119,7 +119,7 @@ func api(mart *martini.ClassicMartini, sched *Sched) {
         }
         stop = start + limit
         var jobs []db.Job
-        var count int
+        var count int64
         jobs, err = db.RangeJob(start, stop)
         count, _ = db.CountJob()
         if err != nil {
@@ -135,11 +135,11 @@ func api(mart *martini.ClassicMartini, sched *Sched) {
             func(params martini.Params, req *http.Request, r render.Render) {
         qs := req.URL.Query()
         id := params["job_id"]
-        var jobId int
+        var jobId int64
         if qs.Get("id_type") == "name" {
             jobId, _ = db.GetIndex("job:name", id)
         } else {
-            jobId, _ = strconv.Atoi(id)
+            jobId, _ = strconv.ParseInt(id, 10, 0)
         }
         err := db.DelJob(jobId)
         if err != nil {
@@ -159,14 +159,15 @@ func api(mart *martini.ClassicMartini, sched *Sched) {
 
 
     mart.Get(API + "/status", func(r render.Render) {
-        var status = make(map[string]int)
-        var count int
+        var status = make(map[string]int64)
+        var count int64
         count, _ = db.CountJob()
         status["total"] = count
         count, _ = db.CountSchedJob("ready")
         status["ready"] = count
         count, _ = db.CountSchedJob("doing")
         status["doing"] = count
+        status["worker_count"] = int64(sched.TotalWorkerCount)
         r.JSON(http.StatusOK, status)
     })
 }

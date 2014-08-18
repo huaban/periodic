@@ -10,11 +10,11 @@ import (
 
 
 type Job struct {
-    Id        int    `json:"job_id"`
-    Name      string `json:"name"`
-    Timeout   int    `json:"timeout"`
-    SchedAt   int    `json:"sched_at"`
-    Status    string `json:"status"`
+    Id      int64  `json:"job_id"`
+    Name    string `json:"name"`
+    Timeout int64  `json:"timeout"`
+    SchedAt int64  `json:"sched_at"`
+    Status  string `json:"status"`
 }
 
 
@@ -23,7 +23,7 @@ func (job *Job) Save() (err error) {
     var key string
     if job.Id > 0 {
         var old Job
-        key = tableName + ":" + strconv.Itoa(job.Id)
+        key = tableName + ":" + strconv.FormatInt(job.Id, 10)
         err = GetObject(key, &old)
         if err != nil || old.Id < 1 {
             err = errors.New(fmt.Sprintf("Update Job %d fail, the old job is not exists.", job.Id))
@@ -35,7 +35,7 @@ func (job *Job) Save() (err error) {
             }
         }
         if old.Status != job.Status {
-            if e := DelIndex(tableName + ":" + old.Status + ":sched", strconv.Itoa(job.Id)); e != nil {
+            if e := DelIndex(tableName + ":" + old.Status + ":sched", strconv.FormatInt(job.Id, 10)); e != nil {
                 log.Printf("DelIndex Error: %s %d\n", tableName + ":" + old.Status + ":sched", old.Id)
             }
         }
@@ -50,13 +50,13 @@ func (job *Job) Save() (err error) {
         err = errors.New("Duplicate Job name: " + job.Name)
         return
     }
-    key = tableName + ":" + strconv.Itoa(job.Id)
+    key = tableName + ":" + strconv.FormatInt(job.Id, 10)
     err = SetObject(key, job)
     if err == nil {
-        if e := AddIndex(tableName, strconv.Itoa(job.Id), job.Id); e != nil {
+        if e := AddIndex(tableName, strconv.FormatInt(job.Id, 10), job.Id); e != nil {
             log.Printf("AddIndex Error: %s %d\n", tableName, job.Id)
         }
-        if e := AddIndex(tableName + ":" + job.Status + ":sched", strconv.Itoa(job.Id), job.SchedAt); e != nil {
+        if e := AddIndex(tableName + ":" + job.Status + ":sched", strconv.FormatInt(job.Id, 10), job.SchedAt); e != nil {
             log.Printf("AddIndex Error: %s %d\n", tableName + ":" + job.Status + ":sched", job.Id)
         }
         if e := AddIndex(tableName + ":name", job.Name, job.Id); e != nil {
@@ -69,24 +69,24 @@ func (job *Job) Save() (err error) {
 
 func (job *Job) Delete() (err error) {
     var tableName = GetTableName(*job)
-    var key = tableName + ":" + strconv.Itoa(job.Id)
+    var key = tableName + ":" + strconv.FormatInt(job.Id, 10)
     err = DelObject(key)
-    DelIndex(tableName, strconv.Itoa(job.Id))
-    DelIndex(tableName + ":" + job.Status + ":sched", strconv.Itoa(job.Id))
+    DelIndex(tableName, strconv.FormatInt(job.Id, 10))
+    DelIndex(tableName + ":" + job.Status + ":sched", strconv.FormatInt(job.Id, 10))
     DelIndex(tableName + ":name", job.Name)
     return
 }
 
 
-func GetJob(id int) (job Job, err error) {
+func GetJob(id int64) (job Job, err error) {
     var tableName = GetTableName(job)
-    var key = tableName + ":" +  strconv.Itoa(id)
+    var key = tableName + ":" +  strconv.FormatInt(id, 10)
     err = GetObject(key, &job)
     return
 }
 
 
-func DelJob(id int) (err error) {
+func DelJob(id int64) (err error) {
     var job Job
     job, err = GetJob(id)
     if err != nil {
@@ -97,7 +97,7 @@ func DelJob(id int) (err error) {
 }
 
 
-func CountJob() (count int, err error) {
+func CountJob() (count int64, err error) {
     var tableName = GetTableName(Job{})
     count, err = CountIndex(tableName)
     return
@@ -126,7 +126,7 @@ func RangeSchedJob(status string, start, stop int) (jobs []Job, err error) {
     jobs = make([]Job, len(idxs))
 
     for k, idx := range idxs {
-        jobId, _ := strconv.Atoi(idx.Name)
+        jobId, _ := strconv.ParseInt(idx.Name, 10, 0)
         job, _ :=  GetJob(jobId)
         job.Id = jobId
         job.Status = status
@@ -136,7 +136,7 @@ func RangeSchedJob(status string, start, stop int) (jobs []Job, err error) {
 }
 
 
-func CountSchedJob(status string) (count int, err error) {
+func CountSchedJob(status string) (count int64, err error) {
     var tableName = GetTableName(Job{})
     count, err = CountIndex(tableName + ":" + status + ":sched")
     return

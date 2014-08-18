@@ -3,5 +3,5 @@ package db
 
 type Index struct {
     Name string
-    Score int
+    Score int64
 }

@@ -40,9 +40,9 @@ func DelObject(key string) (err error) {
     return
 }
 
-func NextSequence(name string) (val int, err error) {
+func NextSequence(name string) (val int64, err error) {
     var conn = pool.Get()
     defer conn.Close()
-    val, err = redis.Int(conn.Do("INCRBY", PREFIX + "sequence:" + name, 1))
+    val, err = redis.Int64(conn.Do("INCRBY", PREFIX + "sequence:" + name, 1))
     return
 }

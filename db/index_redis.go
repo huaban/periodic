@@ -8,7 +8,7 @@ import (
 )
 
 
-func AddIndex(name, member string, score int) (err error) {
+func AddIndex(name, member string, score int64) (err error) {
     var key = "index:" + name
     var conn = pool.Get()
     defer conn.Close()
@@ -16,11 +16,11 @@ func AddIndex(name, member string, score int) (err error) {
     return
 }
 
-func GetIndex(name, member string) (score int, err error) {
+func GetIndex(name, member string) (score int64, err error) {
     var key = "index:" + name
     var conn = pool.Get()
     defer conn.Close()
-    score, err = redis.Int(conn.Do("ZSCORE", PREFIX + key, member))
+    score, err = redis.Int64(conn.Do("ZSCORE", PREFIX + key, member))
     return
 }
 
@@ -36,11 +36,11 @@ func RangeIndex(name string, start, stop int, rev ...bool) (retval []Index, err 
     }
     reply, err := redis.Values(conn.Do(cmd, PREFIX + key, start, stop, "WITHSCORES"))
     var _key string
-    var score int
+    var score int64
     retval = make([]Index, len(reply)/2)
     for k, v := range reply {
         if k % 2 == 1 {
-            score, _ = strconv.Atoi(string(v.([]byte)))
+            score, _ = strconv.ParseInt(string(v.([]byte)), 10, 0)
             retval[(k-1)/2] = Index{_key,score}
         } else {
             _key = string(v.([]byte))
@@ -49,11 +49,11 @@ func RangeIndex(name string, start, stop int, rev ...bool) (retval []Index, err 
     return
 }
 
-func CountIndex(name string) (count int, err error) {
+func CountIndex(name string) (count int64, err error) {
     var key = "index:" + name
     var conn = pool.Get()
     defer conn.Close()
-    count, err = redis.Int(conn.Do("ZCARD", PREFIX + key))
+    count, err = redis.Int64(conn.Do("ZCARD", PREFIX + key))
     return
 }
 

@@ -50,7 +50,7 @@ func (worker *Worker) HandleDo(job db.Job) (err error){
 }
 
 
-func (worker *Worker) HandleDone(jobId int) (err error) {
+func (worker *Worker) HandleDone(jobId int64) (err error) {
     log.Printf("HandleDone: %d\n", jobId)
     worker.sched.Done(jobId)
     removeListJob(worker.jobQueue, jobId)
@@ -58,7 +58,7 @@ func (worker *Worker) HandleDone(jobId int) (err error) {
 }
 
 
-func (worker *Worker) HandleFail(jobId int) (err error) {
+func (worker *Worker) HandleFail(jobId int64) (err error) {
     log.Printf("HandleFail: %d\n", jobId)
     worker.sched.Fail(jobId)
     removeListJob(worker.jobQueue, jobId)
@@ -73,7 +73,7 @@ func (worker *Worker) HandleWaitForJob() (err error) {
 }
 
 
-func (worker *Worker) HandleSchedLater(jobId, delay int) (err error){
+func (worker *Worker) HandleSchedLater(jobId, delay int64) (err error){
     log.Printf("HandleSchedLater: %d %d\n", jobId, delay)
     worker.sched.SchedLater(jobId, delay)
     removeListJob(worker.jobQueue, jobId)
@@ -123,7 +123,7 @@ func (worker *Worker) Handle() {
                 log.Printf("Error: invalid format.")
                 break
             }
-            jobId, _ := strconv.Atoi(string(parts[1]))
+            jobId, _ := strconv.ParseInt(string(parts[1]), 10, 0)
             err = worker.HandleDone(jobId)
             break
         case "fail":
@@ -131,7 +131,7 @@ func (worker *Worker) Handle() {
                 log.Printf("Error: invalid format.")
                 break
             }
-            jobId, _ := strconv.Atoi(string(parts[1]))
+            jobId, _ := strconv.ParseInt(string(parts[1]), 10, 0)
             err = worker.HandleFail(jobId)
             break
         case "sched_later":
@@ -144,8 +144,8 @@ func (worker *Worker) Handle() {
                 log.Printf("Error: invalid format.")
                 break
             }
-            jobId, _ := strconv.Atoi(string(parts[0]))
-            delay, _ := strconv.Atoi(string(parts[1]))
+            jobId, _ := strconv.ParseInt(string(parts[0]), 10, 0)
+            delay, _ := strconv.ParseInt(string(parts[1]), 10, 0)
             err = worker.HandleSchedLater(jobId, delay)
             break
         case "sleep":

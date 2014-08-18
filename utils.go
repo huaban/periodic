@@ -35,12 +35,12 @@ func packJob(job db.Job) ([]byte, error) {
     }
     buf := bytes.NewBuffer(jobStr)
     buf.WriteByte(NULL_CHAR)
-    buf.WriteString(strconv.Itoa(job.Id))
+    buf.WriteString(strconv.FormatInt(job.Id, 10))
     return buf.Bytes(), nil
 }
 
 
-func removeListJob(l *list.List, jobId int) {
+func removeListJob(l *list.List, jobId int64) {
     for e := l.Front(); e != nil; e = e.Next() {
         if e.Value.(db.Job).Id == jobId {
             l.Remove(e)
