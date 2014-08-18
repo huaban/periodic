@@ -28,15 +28,18 @@ class BaseClient(object):
     def __init__(self, reader, writer):
         self._reader = reader
         self._writer = writer
+        self._rlock = asyncio.Lock()
+        self._wlock = asyncio.Lock()
 
 
     @asyncio.coroutine
     def recive(self):
-        head = yield from self._reader.read(4)
-        length, hasFd = parseHeader(head)
+        with (yield from self._rlock):
+            head = yield from self._reader.read(4)
+            length, hasFd = parseHeader(head)
 
-        payload = yield from self._reader.read(length)
-        return payload
+            payload = yield from self._reader.read(length)
+            return payload
 
 
     @asyncio.coroutine
@@ -47,9 +50,10 @@ class BaseClient(object):
         elif isinstance(payload, str):
             payload = bytes(payload, 'utf-8')
         header = makeHeader(payload)
-        self._writer.write(header)
-        self._writer.write(payload)
-        yield from self._writer.drain()
+        with (yield from self._wlock):
+            self._writer.write(header)
+            self._writer.write(payload)
+            yield from self._writer.drain()
 
 
 class Client(object):
