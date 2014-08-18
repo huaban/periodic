@@ -66,12 +66,11 @@ class Client(object):
         return True
 
 
-    def connect(self, sock_file):
+    def add_server(self, sock_file):
         self._sock_file = sock_file
-        yield from self._connect()
 
 
-    def reconnect(self):
+    def connect(self):
         try:
             ret = yield from self.ping()
             if ret:
