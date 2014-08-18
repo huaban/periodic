@@ -11,9 +11,9 @@ import (
 
 type Worker struct {
     jobQueue *list.List
-    conn Conn
-    sched *Sched
-    alive bool
+    conn     Conn
+    sched    *Sched
+    alive    bool
 }
 
 

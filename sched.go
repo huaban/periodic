@@ -12,10 +12,10 @@ import (
 
 type Sched struct {
     TotalWorkerCount int
-    timer *time.Timer
-    grabQueue *list.List
-    jobQueue *list.List
-    sockFile string
+    timer            *time.Timer
+    grabQueue        *list.List
+    jobQueue         *list.List
+    sockFile         string
     JobLocker        *sync.Mutex
 }
 
