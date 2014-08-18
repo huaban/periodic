@@ -16,7 +16,7 @@ type Sched struct {
     grabQueue *list.List
     jobQueue *list.List
     sockFile string
-    locker   *sync.Mutex
+    JobLocker        *sync.Mutex
 }
 
 
@@ -27,7 +27,7 @@ func NewSched(sockFile string) *Sched {
     sched.grabQueue = list.New()
     sched.jobQueue = list.New()
     sched.sockFile = sockFile
-    sched.locker = new(sync.Mutex)
+    sched.JobLocker = new(sync.Mutex)
     return sched
 }
 
@@ -75,8 +75,8 @@ func (sched *Sched) HandleConnection(conn net.Conn) {
 
 func (sched *Sched) Done(jobId int) {
     defer sched.Notify()
-    defer sched.locker.Unlock()
-    sched.locker.Lock()
+    defer sched.JobLocker.Unlock()
+    sched.JobLocker.Lock()
     removeListJob(sched.jobQueue, jobId)
     db.DelJob(jobId)
     return
@@ -112,8 +112,8 @@ func (sched *Sched) isDoJob(job db.Job) bool {
 
 
 func (sched *Sched) SubmitJob(worker *Worker, job db.Job) {
-    defer sched.locker.Unlock()
-    sched.locker.Lock()
+    defer sched.JobLocker.Unlock()
+    sched.JobLocker.Lock()
     if job.Name == "" {
         job.Delete()
         return
@@ -170,8 +170,8 @@ func (sched *Sched) handle() {
 
 func (sched *Sched) Fail(jobId int) {
     defer sched.Notify()
-    defer sched.locker.Unlock()
-    sched.locker.Lock()
+    defer sched.JobLocker.Unlock()
+    sched.JobLocker.Lock()
     removeListJob(sched.jobQueue, jobId)
     job, _ := db.GetJob(jobId)
     job.Status = "ready"
@@ -182,8 +182,8 @@ func (sched *Sched) Fail(jobId int) {
 
 func (sched *Sched) SchedLater(jobId int, delay int) {
     defer sched.Notify()
-    defer sched.locker.Unlock()
-    sched.locker.Lock()
+    defer sched.JobLocker.Unlock()
+    sched.JobLocker.Lock()
     removeListJob(sched.jobQueue, jobId)
     job, _ := db.GetJob(jobId)
     job.Status = "ready"
