@@ -75,6 +75,7 @@ class Client(object):
         try:
             ret = yield from self.ping()
             if ret:
+                self.connected = True
                 return True
         except Exception:
             pass
