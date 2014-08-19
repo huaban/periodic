@@ -93,7 +93,7 @@ func (sched *Sched) isDoJob(job db.Job) bool {
         if runAt < chk.SchedAt {
             runAt = chk.SchedAt
         }
-        if chk.Timeout > 0 && runAt + chk.Timeout > current {
+        if chk.Timeout > 0 && runAt + chk.Timeout < current {
             newJob, _ := db.GetJob(chk.Id)
             if newJob.Status == "doing" {
                 newJob.Status = "ready"
