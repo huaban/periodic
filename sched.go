@@ -89,7 +89,11 @@ func (sched *Sched) isDoJob(job db.Job) bool {
     ret := false
     for e := sched.jobQueue.Front(); e != nil; e = e.Next() {
         chk := e.Value.(db.Job)
-        if chk.Timeout > 0 && chk.SchedAt + chk.Timeout > current {
+        runAt := chk.RunAt
+        if runAt < chk.SchedAt {
+            runAt = chk.SchedAt
+        }
+        if chk.Timeout > 0 && runAt + chk.Timeout > current {
             newJob, _ := db.GetJob(chk.Id)
             if newJob.Status == "doing" {
                 newJob.Status = "ready"
@@ -100,7 +104,11 @@ func (sched *Sched) isDoJob(job db.Job) bool {
         }
         if chk.Id == job.Id {
             old := e.Value.(db.Job)
-            if old.Timeout > 0 && old.SchedAt + old.Timeout < current {
+            runAt := old.RunAt
+            if runAt < old.SchedAt {
+                runAt = old.SchedAt
+            }
+            if old.Timeout > 0 && runAt + old.Timeout < current {
                 ret = false
             } else {
                 ret = true
@@ -129,7 +137,10 @@ func (sched *Sched) SubmitJob(worker *Worker, job db.Job) {
         sched.DieWorker(worker)
         return
     }
+    now := time.Now()
+    current := int64(now.Unix())
     job.Status = "doing"
+    job.RunAt = current
     job.Save()
     sched.jobQueue.PushBack(job)
     sched.removeGrabQueue(worker)
@@ -219,7 +230,11 @@ func (sched *Sched) checkJobQueue() {
                 removeQueue = append(removeQueue, job)
                 continue
             }
-            if job.SchedAt + job.Timeout < current {
+            runAt := job.RunAt
+            if runAt < job.SchedAt {
+                runAt = job.SchedAt
+            }
+            if runAt + job.Timeout < current {
                 updateQueue = append(updateQueue, job)
             } else {
                 sched.jobQueue.PushBack(job)
