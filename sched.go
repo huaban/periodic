@@ -30,6 +30,7 @@ func NewSched(sockFile string) *Sched {
     sched.jobQueue = list.New()
     sched.sockFile = sockFile
     sched.JobLocker = new(sync.Mutex)
+    sched.FuncLocker = new(sync.Mutex)
     sched.Funcs = make([]string, 0)
     return sched
 }
