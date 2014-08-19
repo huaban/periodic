@@ -14,6 +14,7 @@ type Worker struct {
     conn     Conn
     sched    *Sched
     alive    bool
+    Funcs    []string
 }
 
 
@@ -22,6 +23,7 @@ func NewWorker(sched *Sched, conn Conn) (worker *Worker) {
     worker.conn = conn
     worker.jobQueue = list.New()
     worker.sched = sched
+    worker.Funcs = make([]string, 0)
     worker.alive = true
     return
 }
@@ -46,6 +48,32 @@ func (worker *Worker) HandleDo(job db.Job) (err error){
     }
     job.Status = "doing"
     job.Save()
+    return nil
+}
+
+
+func (worker *Worker) HandleCanDo(Func string) error {
+    log.Printf("HandleCanDo: %s\n", Func)
+    for _, f := range worker.Funcs {
+        if f == Func {
+            return nil
+        }
+    }
+    worker.Funcs = append(worker.Funcs, Func)
+    return nil
+}
+
+
+func (worker *Worker) HandleCanNoDo(Func string) error {
+    log.Printf("HandleCanDo: %s\n", Func)
+    newFuncs := make([]string, 0)
+    for _, f := range worker.Funcs {
+        if f == Func {
+            continue
+        }
+        newFuncs = append(newFuncs, f)
+    }
+    worker.Funcs = newFuncs
     return nil
 }
 
@@ -153,6 +181,12 @@ func (worker *Worker) Handle() {
             break
         case "ping":
             err = conn.Send([]byte("pong"))
+            break
+        case "can_do":
+            err = worker.HandleCanDo(string(parts[1]))
+            break
+        case "can_no_do":
+            err = worker.HandleCanNoDo(string(parts[1]))
             break
         default:
             err = conn.Send([]byte("unknown"))
