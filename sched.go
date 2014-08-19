@@ -17,6 +17,8 @@ type Sched struct {
     jobQueue         *list.List
     sockFile         string
     JobLocker        *sync.Mutex
+    Funcs            []string
+    FuncLocker       *sync.Mutex
 }
 
 
@@ -28,6 +30,7 @@ func NewSched(sockFile string) *Sched {
     sched.jobQueue = list.New()
     sched.sockFile = sockFile
     sched.JobLocker = new(sync.Mutex)
+    sched.Funcs = make([]string, 0)
     return sched
 }
 
@@ -150,30 +153,66 @@ func (sched *Sched) SubmitJob(worker *Worker, job db.Job) {
 func (sched *Sched) handle() {
     var current time.Time
     var timestamp int64
+    var schedJob db.Job
+    var isFirst bool
     for {
-        for e := sched.grabQueue.Front(); e != nil; e = e.Next() {
-            worker := e.Value.(*Worker)
-            jobs, err := db.RangeSchedJob("ready", 0, 0)
-            if err != nil || len(jobs) == 0 {
-                sched.timer.Reset(time.Minute)
-                current =<-sched.timer.C
-                continue
-            }
-            timestamp = int64(time.Now().Unix())
-            if jobs[0].SchedAt < timestamp {
-                sched.SubmitJob(worker, jobs[0])
-            } else {
-                sched.timer.Reset(time.Second * time.Duration(jobs[0].SchedAt - timestamp))
-                current =<-sched.timer.C
-                timestamp = int64(current.Unix())
-                if jobs[0].SchedAt <= timestamp {
-                    sched.SubmitJob(worker, jobs[0])
-                }
-            }
-        }
         if sched.grabQueue.Len() == 0 {
             sched.timer.Reset(time.Minute)
             current =<-sched.timer.C
+            continue
+        }
+
+        isFirst = true
+        for _, Func := range sched.Funcs {
+            jobs, err := db.RangeSchedJob(Func, "ready", 0, 0)
+            if err != nil || len(jobs) == 0 {
+                continue
+            }
+
+            if isFirst {
+                schedJob = jobs[0]
+                isFirst = false
+                continue
+            }
+
+            if schedJob.SchedAt > jobs[0].SchedAt {
+                schedJob = jobs[0]
+            }
+        }
+        if isFirst {
+            sched.timer.Reset(time.Minute)
+            current =<-sched.timer.C
+            continue
+        }
+
+        timestamp = int64(time.Now().Unix())
+
+        if schedJob.SchedAt > timestamp {
+            sched.timer.Reset(time.Second * time.Duration(schedJob.SchedAt - timestamp))
+            current =<-sched.timer.C
+            timestamp = int64(current.Unix())
+            if schedJob.SchedAt > timestamp {
+                continue
+            }
+        }
+
+        isSubmited := false
+        for e := sched.grabQueue.Front(); e != nil; e = e.Next() {
+            worker := e.Value.(*Worker)
+            for _, Func := range worker.Funcs {
+                if schedJob.Func == Func {
+                    sched.SubmitJob(worker, schedJob)
+                    isSubmited = true
+                    break
+                }
+            }
+            if isSubmited {
+                break
+            }
+        }
+
+        if !isSubmited {
+            sched.RemoveFunc(schedJob.Func)
         }
     }
 }
@@ -188,6 +227,32 @@ func (sched *Sched) Fail(jobId int64) {
     job.Status = "ready"
     job.Save()
     return
+}
+
+
+func (sched *Sched) AddFunc(Func string) {
+    defer sched.FuncLocker.Unlock()
+    sched.FuncLocker.Lock()
+    for _, f := range sched.Funcs {
+        if f == Func {
+            return
+        }
+    }
+    sched.Funcs = append(sched.Funcs, Func)
+}
+
+
+func (sched *Sched) RemoveFunc(Func string) {
+    defer sched.FuncLocker.Unlock()
+    sched.FuncLocker.Lock()
+    newFuncs := make([]string, 0)
+    for _, f := range sched.Funcs {
+        if f == Func {
+            continue
+        }
+        newFuncs = append(newFuncs, f)
+    }
+    sched.Funcs = newFuncs
 }
 
 
@@ -217,17 +282,20 @@ func (sched *Sched) removeGrabQueue(worker *Worker) {
 func (sched *Sched) checkJobQueue() {
     start := 0
     limit := 20
-    total, _ := db.CountSchedJob("doing")
+    total, _ := db.CountJob()
     updateQueue := make([]db.Job, 0)
     removeQueue := make([]db.Job, 0)
     var now = time.Now()
     current := int64(now.Unix())
 
     for start = 0; start < int(total); start += limit {
-        jobs, _ := db.RangeSchedJob("doing", start, start + limit)
+        jobs, _ := db.RangeJob(start, start + limit)
         for _, job := range jobs {
             if job.Name == "" {
                 removeQueue = append(removeQueue, job)
+                continue
+            }
+            if job.Status != "doing" {
                 continue
             }
             runAt := job.RunAt
