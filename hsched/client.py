@@ -112,3 +112,11 @@ class Client(object):
             return None
 
         return Job(payload, self._agent)
+
+
+    def add_func(self, func):
+        yield from self._agent.send(["can_do", func])
+
+
+    def remove_func(self, func):
+        yield from self._agent.send("can_no_do", func)
