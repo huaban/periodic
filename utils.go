@@ -12,7 +12,7 @@ import (
 )
 
 
-const NULL_CHAR = byte(1)
+var NULL_CHAR = []byte("\x01")
 
 
 func sockCheck(sockFile string) {
@@ -34,7 +34,7 @@ func packJob(job db.Job) ([]byte, error) {
         return nil, err
     }
     buf := bytes.NewBuffer(jobStr)
-    buf.WriteByte(NULL_CHAR)
+    buf.Write(NULL_CHAR)
     buf.WriteString(strconv.FormatInt(job.Id, 10))
     return buf.Bytes(), nil
 }

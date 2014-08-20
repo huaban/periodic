@@ -9,6 +9,19 @@ import (
 )
 
 
+const (
+    NOOP = iota
+    GRAB_JOB
+    JOB_DONE
+    SCHED_LATER
+    JOB_FAIL
+    SLEEP
+    PING
+    CAN_DO
+    CANT_DO
+)
+
+
 type Worker struct {
     jobQueue *list.List
     conn     Conn
@@ -137,38 +150,21 @@ func (worker *Worker) Handle() {
             return
         }
 
-        buf := bytes.NewBuffer(nil)
-        buf.WriteByte(NULL_CHAR)
-        null_char := buf.Bytes()
 
-        parts := bytes.SplitN(payload, null_char, 2)
-        cmd := string(parts[0])
-        switch cmd {
-        case "grab":
+        switch payload[0] {
+        case GRAB_JOB:
             err = worker.HandleGrabJob()
             break
-        case "done":
-            if len(parts) != 2 {
-                log.Printf("Error: invalid format.")
-                break
-            }
-            jobId, _ := strconv.ParseInt(string(parts[1]), 10, 0)
+        case JOB_DONE:
+            jobId, _ := strconv.ParseInt(string(payload[2:]), 10, 0)
             err = worker.HandleDone(jobId)
             break
-        case "fail":
-            if len(parts) != 2 {
-                log.Printf("Error: invalid format.")
-                break
-            }
-            jobId, _ := strconv.ParseInt(string(parts[1]), 10, 0)
+        case JOB_FAIL:
+            jobId, _ := strconv.ParseInt(string(payload[2:]), 10, 0)
             err = worker.HandleFail(jobId)
             break
-        case "sched_later":
-            if len(parts) != 2 {
-                log.Printf("Error: invalid format.")
-                break
-            }
-            parts = bytes.SplitN(parts[1], null_char, 2)
+        case SCHED_LATER:
+            parts := bytes.SplitN(payload[2:], NULL_CHAR, 2)
             if len(parts) != 2 {
                 log.Printf("Error: invalid format.")
                 break
@@ -177,17 +173,17 @@ func (worker *Worker) Handle() {
             delay, _ := strconv.ParseInt(string(parts[1]), 10, 0)
             err = worker.HandleSchedLater(jobId, delay)
             break
-        case "sleep":
+        case SLEEP:
             err = conn.Send([]byte("nop"))
             break
-        case "ping":
+        case PING:
             err = conn.Send([]byte("pong"))
             break
-        case "can_do":
-            err = worker.HandleCanDo(string(parts[1]))
+        case CAN_DO:
+            err = worker.HandleCanDo(string(payload[2:]))
             break
-        case "can_no_do":
-            err = worker.HandleCanNoDo(string(parts[1]))
+        case CANT_DO:
+            err = worker.HandleCanNoDo(string(payload[2:]))
             break
         default:
             err = conn.Send([]byte("unknown"))

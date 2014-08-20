@@ -1,11 +1,11 @@
 import json
+from . import utils
 
-NULL_CHAR = b"\x01"
 
 class Job(object):
 
     def __init__(self, payload, client):
-        payload = payload.split(NULL_CHAR)
+        payload = payload.split(utils.NULL_CHAR)
         self.payload = json.loads(str(payload[0], "UTF-8"))
         self.job_handle = str(payload[1], "UTF-8")
         self.client = client
@@ -16,15 +16,15 @@ class Job(object):
 
 
     def done(self):
-        yield from self.client.send(["done", self.job_handle])
+        yield from self.client.send([utils.JOB_DONE, self.job_handle])
 
 
     def sched_later(self, delay):
-        yield from self.client.send(["sched_later", self.job_handle,str(delay)])
+        yield from self.client.send([utils.SCHED_LATER, self.job_handle, str(delay)])
 
 
     def fail(self):
-        yield from self.client.send(["fail", self.job_handle])
+        yield from self.client.send([utils.JOB_FAIL, self.job_handle])
 
 
     @property

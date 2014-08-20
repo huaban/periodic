@@ -1,4 +1,6 @@
 from .job import Job
+from .utils import to_bytes
+from . import utils
 import asyncio
 
 NULL_CHAR = b"\x01"
@@ -45,7 +47,7 @@ class BaseClient(object):
     @asyncio.coroutine
     def send(self, payload):
         if isinstance(payload, list):
-            payload = [bytes(p, "utf-8") for p in payload]
+            payload = [to_bytes(p) for p in payload]
             payload = NULL_CHAR.join(payload)
         elif isinstance(payload, str):
             payload = bytes(payload, 'utf-8')
@@ -98,7 +100,7 @@ class Client(object):
 
 
     def ping(self):
-        yield from self._agent.send("ping")
+        yield from self._agent.send(utils.PING)
         payload = yield from self._agent.recive()
         if payload == b'pong':
             return True
@@ -106,7 +108,7 @@ class Client(object):
 
 
     def grabJob(self):
-        yield from self._agent.send("grab")
+        yield from self._agent.send(utils.GRAB_JOB)
         payload = yield from self._agent.recive()
         if payload == b'no_job' or payload == b'wait_for_job':
             return None
@@ -115,8 +117,8 @@ class Client(object):
 
 
     def add_func(self, func):
-        yield from self._agent.send(["can_do", func])
+        yield from self._agent.send([utils.CAN_DO, func])
 
 
     def remove_func(self, func):
-        yield from self._agent.send("can_no_do", func)
+        yield from self._agent.send(utils.CANT_DO, func)
