@@ -11,10 +11,6 @@ class Job(object):
         self.client = client
 
 
-    def __getattr__(self, key):
-        return self.workload.get(key)
-
-
     def get(self, key, default=None):
         return self.workload.get(key, default)
 
@@ -29,3 +25,28 @@ class Job(object):
 
     def fail(self):
         yield from self.client.send(["fail", self.job_handle])
+
+
+    @property
+    def func_name(self):
+        return self.workload['name']
+
+
+    @property
+    def name(self):
+        return self.workload.get("name")
+
+
+    @property
+    def sched_at(self):
+        return self.workload["sched_at"]
+
+
+    @property
+    def timeout(self):
+        return self.workload.get("timeout", 0)
+
+
+    @property
+    def run_at(self):
+        return self.workload.get("run_at", self.sched_at)
