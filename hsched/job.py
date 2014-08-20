@@ -29,7 +29,7 @@ class Job(object):
 
     @property
     def func_name(self):
-        return self.payload['name']
+        return self.payload['func']
 
 
     @property
