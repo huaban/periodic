@@ -14,6 +14,7 @@ type Job struct {
     Id      int64  `json:"job_id"`
     Name    string `json:"name"`
     Func    string `json:"func"`
+    Args    string `json:"workload"`
     Timeout int64  `json:"timeout"`
     SchedAt int64  `json:"sched_at"`
     RunAt   int64  `json:"run_at"`

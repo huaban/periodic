@@ -50,3 +50,8 @@ class Job(object):
     @property
     def run_at(self):
         return self.payload.get("run_at", self.sched_at)
+
+
+    @property
+    def workload(self):
+        return self.payload.get("workload")

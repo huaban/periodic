@@ -36,6 +36,7 @@ func StartHttpServer(addr string, sched *Sched) {
 type JobForm struct {
     Name    string `form:"name" binding:"required"`
     Func    string `form:"func" binding:"required"`
+    Args    string `form:"workload"`
     Timeout int64  `form:"timeout"`
     SchedAt int64  `form:"sched_at" binding:"required"`
 }
@@ -47,6 +48,7 @@ func api(mart *martini.ClassicMartini, sched *Sched) {
         job := db.Job{
             Name: j.Name,
             Func: j.Func,
+            Args: j.Args,
             Timeout: j.Timeout,
             SchedAt: j.SchedAt,
             Status: "ready",
