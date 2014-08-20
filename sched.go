@@ -5,6 +5,7 @@ import (
     "net"
     "time"
     "sync"
+    "strings"
     "container/list"
     "huabot-sched/db"
 )
@@ -15,20 +16,20 @@ type Sched struct {
     timer            *time.Timer
     grabQueue        *list.List
     jobQueue         *list.List
-    sockFile         string
+    entryPoint       string
     JobLocker        *sync.Mutex
     Funcs            []string
     FuncLocker       *sync.Mutex
 }
 
 
-func NewSched(sockFile string) *Sched {
+func NewSched(entryPoint string) *Sched {
     sched = new(Sched)
     sched.TotalWorkerCount = 0
     sched.timer = time.NewTimer(1 * time.Hour)
     sched.grabQueue = list.New()
     sched.jobQueue = list.New()
-    sched.sockFile = sockFile
+    sched.entryPoint = entryPoint
     sched.JobLocker = new(sync.Mutex)
     sched.FuncLocker = new(sync.Mutex)
     sched.Funcs = make([]string, 0)
@@ -37,15 +38,18 @@ func NewSched(sockFile string) *Sched {
 
 
 func (sched *Sched) Serve() {
-    sockCheck(sched.sockFile)
+    parts := strings.SplitN(sched.entryPoint, "://", 2)
+    if parts[0] == "unix" {
+        sockCheck(parts[1])
+    }
     sched.checkJobQueue()
     go sched.handle()
-    listen, err := net.Listen("unix", sched.sockFile)
+    listen, err := net.Listen(parts[0], parts[1])
     if err != nil {
         log.Fatal(err)
     }
     defer listen.Close()
-    log.Printf("huabot-sched started on %s\n", sched.sockFile)
+    log.Printf("huabot-sched started on %s\n", sched.entryPoint)
     for {
         conn, err := listen.Accept()
         if err != nil {
