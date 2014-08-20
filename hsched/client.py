@@ -102,7 +102,7 @@ class Client(object):
     def ping(self):
         yield from self._agent.send(utils.PING)
         payload = yield from self._agent.recive()
-        if payload == b'pong':
+        if payload == utils.PONG:
             return True
         return False
 
@@ -110,7 +110,7 @@ class Client(object):
     def grabJob(self):
         yield from self._agent.send(utils.GRAB_JOB)
         payload = yield from self._agent.recive()
-        if payload == b'no_job' or payload == b'wait_for_job':
+        if payload == utils.NO_JOB or payload == utils.WAIT_JOB:
             return None
 
         return Job(payload, self._agent)
