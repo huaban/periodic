@@ -10,19 +10,23 @@ import (
 
 
 const (
-    NOOP = iota
-    GRAB_JOB
-    JOB_DONE
-    SCHED_LATER
-    JOB_FAIL
-    SLEEP
-    PING
-    CAN_DO
-    CANT_DO
-    PONG
-    WAIT_JOB
-    NO_JOB
-    UNKNOWN
+    NOOP = iota // server
+    // for job
+    GRAB_JOB    // client
+    SCHED_LATER // client
+    JOB_DONE    // client
+    JOB_FAIL    // client
+    WAIT_JOB    // server
+    NO_JOB      // server
+    // for func
+    CAN_DO      // client
+    CANT_DO     // client
+    // for test
+    PING        // client
+    PONG        // server
+    // other
+    SLEEP       // client
+    UNKNOWN     // server
 )
 
 
