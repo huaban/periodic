@@ -70,7 +70,12 @@ class Client(object):
 
 
     def _connect(self):
-        reader, writer = yield from asyncio.open_unix_connection(self._sock_file)
+        if self._entryPoint.startswith("unix://"):
+            reader, writer = yield from asyncio.open_unix_connection(self._entryPoint.split("://")[1])
+        else:
+            host_port = self._entryPoint.split("://")[1].split(":")
+            reader, writer = yield from asyncio.open_connection(host_port[0], host_port[1])
+
         if self._agent:
             try:
                 self._agent.close()
@@ -81,8 +86,8 @@ class Client(object):
         return True
 
 
-    def add_server(self, sock_file):
-        self._sock_file = sock_file
+    def add_server(self, entryPoint):
+        self._entryPoint = entryPoint
 
 
     def connect(self):
