@@ -53,7 +53,7 @@ func api(mart *martini.ClassicMartini, sched *Sched) {
             SchedAt: j.SchedAt,
             Status: "ready",
         }
-        jobId, _ := db.GetIndex("job:name", job.Name)
+        jobId, _ := db.GetIndex("job:" + job.Func + ":name", job.Name)
         if jobId > 0 {
             job.Id = jobId
         }
