@@ -99,7 +99,7 @@ class Client(object):
         except Exception:
             pass
 
-        print("Try to reconnecting %s"%(self._sock_file))
+        print("Try to reconnecting %s"%(self._entryPoint))
         connected = yield from self._connect()
         return connected
 
