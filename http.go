@@ -179,4 +179,9 @@ func api(mart *martini.ClassicMartini, sched *Sched) {
         status["worker_count"] = int64(sched.TotalWorkerCount)
         r.JSON(http.StatusOK, status)
     })
+
+
+    mart.Get(API + "/status", func(params martini.Params, r render.Render) {
+        r.JSON(http.StatusOK, sched.Funcs)
+    })
 }
