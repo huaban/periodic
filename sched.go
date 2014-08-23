@@ -283,6 +283,7 @@ func (sched *Sched) Fail(jobId int64) {
     job, _ := db.GetJob(jobId)
     job.Status = "ready"
     job.Save()
+    sched.RemoveDoing(job)
     return
 }
 
