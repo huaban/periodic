@@ -53,14 +53,22 @@ func api(mart *martini.ClassicMartini, sched *Sched) {
             SchedAt: j.SchedAt,
             Status: "ready",
         }
+        is_new := true
         jobId, _ := db.GetIndex("job:" + job.Func + ":name", job.Name)
         if jobId > 0 {
             job.Id = jobId
+            if oldJob, err := db.GetJob(jobId); err == nil && oldJob.Status == "doing" {
+                sched.DecrStatProc(oldJob)
+            }
+            is_new = false
         }
         err := job.Save()
         if err != nil {
             r.JSON(http.StatusInternalServerError, map[string]interface{}{"err": err.Error()})
             return
+        }
+        if is_new {
+            sched.IncrStatJob(job)
         }
         sched.Notify()
         r.JSON(http.StatusOK, map[string]db.Job{"job": job})
@@ -149,12 +157,22 @@ func api(mart *martini.ClassicMartini, sched *Sched) {
         } else {
             jobId, _ = strconv.ParseInt(id, 10, 0)
         }
-        err := db.DelJob(jobId)
+        job, err := db.GetJob(jobId)
         if err != nil {
             log.Printf("Error: DelJob error %s\n", err)
             r.JSON(http.StatusOK, map[string]interface{}{"err": err.Error()})
             return
         }
+        err = job.Delete()
+        if err != nil {
+            log.Printf("Error: DelJob error %s\n", err)
+            r.JSON(http.StatusOK, map[string]interface{}{"err": err.Error()})
+            return
+        }
+        if job.Status == "doing" {
+            sched.DecrStatProc(job)
+        }
+        sched.DecrStatJob(job)
         sched.Notify()
         r.JSON(http.StatusOK, map[string]interface{}{})
     })
