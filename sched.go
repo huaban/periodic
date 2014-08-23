@@ -25,7 +25,7 @@ type Sched struct {
 type FuncStat struct {
     TotalWorker int `json:"worker_count"`
     TotalJob    int `json:"job_count"`
-    DoingJob    int `json:"doing"`
+    ProcJob    int `json:"processing"`
 }
 
 
@@ -54,14 +54,14 @@ func (stat *FuncStat) DecrJob() int {
 
 
 func (stat *FuncStat) IncrDoing() int {
-    stat.DoingJob += 1
-    return stat.DoingJob
+    stat.ProcJob += 1
+    return stat.ProcJob
 }
 
 
 func (stat *FuncStat) DecrDoing() int {
-    stat.DoingJob -= 1
-    return stat.DoingJob
+    stat.ProcJob -= 1
+    return stat.ProcJob
 }
 
 
@@ -130,8 +130,8 @@ func (sched *Sched) Done(jobId int64) {
     job, err := db.GetJob(jobId)
     if err == nil {
         job.Delete()
-        sched.RemoveJob(job)
-        sched.RemoveDoing(job)
+        sched.DecrStatJob(job)
+        sched.DecrStatProc(job)
     }
     return
 }
@@ -152,7 +152,7 @@ func (sched *Sched) isDoJob(job db.Job) bool {
             if newJob.Status == "doing" {
                 newJob.Status = "ready"
                 newJob.Save()
-                sched.RemoveDoing(newJob)
+                sched.DecrStatProc(newJob)
             }
             sched.jobQueue.Remove(e)
             continue
@@ -197,7 +197,7 @@ func (sched *Sched) SubmitJob(worker *Worker, job db.Job) {
     job.Status = "doing"
     job.RunAt = current
     job.Save()
-    sched.AddDoing(job)
+    sched.IncrStatProc(job)
     sched.jobQueue.PushBack(job)
     sched.removeGrabQueue(worker)
 }
@@ -217,12 +217,12 @@ func (sched *Sched) handle() {
 
         isFirst = true
         for Func, stat := range sched.Funcs {
-            if stat.TotalWorker == 0 || (stat.TotalJob > 0 && stat.DoingJob == stat.TotalJob) {
+            if stat.TotalWorker == 0 || (stat.TotalJob > 0 && stat.ProcJob == stat.TotalJob) {
                 continue
             }
             jobs, err := db.RangeSchedJob(Func, "ready", 0, 0)
             if err != nil || len(jobs) == 0 {
-                stat.TotalJob = stat.DoingJob
+                stat.TotalJob = stat.ProcJob
                 continue
             }
 
@@ -269,7 +269,7 @@ func (sched *Sched) handle() {
         }
 
         if !isSubmited {
-            sched.RemoveFunc(schedJob.Func)
+            sched.DecrStatFunc(schedJob.Func)
         }
     }
 }
@@ -283,12 +283,12 @@ func (sched *Sched) Fail(jobId int64) {
     job, _ := db.GetJob(jobId)
     job.Status = "ready"
     job.Save()
-    sched.RemoveDoing(job)
+    sched.DecrStatProc(job)
     return
 }
 
 
-func (sched *Sched) AddFunc(Func string) {
+func (sched *Sched) IncrStatFunc(Func string) {
     stat, ok := sched.Funcs[Func]
     if !ok {
         stat = new(FuncStat)
@@ -298,7 +298,7 @@ func (sched *Sched) AddFunc(Func string) {
 }
 
 
-func (sched *Sched) RemoveFunc(Func string) {
+func (sched *Sched) DecrStatFunc(Func string) {
     stat, ok := sched.Funcs[Func]
     if ok {
         stat.DecrWorker()
@@ -306,7 +306,7 @@ func (sched *Sched) RemoveFunc(Func string) {
 }
 
 
-func (sched *Sched) AddJob(job db.Job) {
+func (sched *Sched) IncrStatJob(job db.Job) {
     stat, ok := sched.Funcs[job.Func]
     if !ok {
         stat = new(FuncStat)
@@ -316,7 +316,7 @@ func (sched *Sched) AddJob(job db.Job) {
 }
 
 
-func (sched *Sched) RemoveJob(job db.Job) {
+func (sched *Sched) DecrStatJob(job db.Job) {
     stat, ok := sched.Funcs[job.Func]
     if ok {
         stat.DecrJob()
@@ -324,7 +324,7 @@ func (sched *Sched) RemoveJob(job db.Job) {
 }
 
 
-func (sched *Sched) AddDoing(job db.Job) {
+func (sched *Sched) IncrStatProc(job db.Job) {
     stat, ok := sched.Funcs[job.Func]
     if !ok {
         stat = new(FuncStat)
@@ -334,7 +334,7 @@ func (sched *Sched) AddDoing(job db.Job) {
 }
 
 
-func (sched *Sched) RemoveDoing(job db.Job) {
+func (sched *Sched) DecrStatProc(job db.Job) {
     stat, ok := sched.Funcs[job.Func]
     if ok {
         stat.DecrDoing()
@@ -352,7 +352,7 @@ func (sched *Sched) SchedLater(jobId int64, delay int64) {
     var now = time.Now()
     job.SchedAt = int64(now.Unix()) + delay
     job.Save()
-    sched.RemoveDoing(job)
+    sched.DecrStatProc(job)
     return
 }
 
@@ -382,7 +382,7 @@ func (sched *Sched) checkJobQueue() {
                 removeQueue = append(removeQueue, job)
                 continue
             }
-            sched.AddJob(job)
+            sched.IncrStatJob(job)
             if job.Status != "doing" {
                 continue
             }
@@ -394,7 +394,7 @@ func (sched *Sched) checkJobQueue() {
                 updateQueue = append(updateQueue, job)
             } else {
                 sched.jobQueue.PushBack(job)
-                sched.AddDoing(job)
+                sched.IncrStatProc(job)
             }
         }
     }

@@ -81,7 +81,7 @@ func (worker *Worker) HandleCanDo(Func string) error {
         }
     }
     worker.Funcs = append(worker.Funcs, Func)
-    worker.sched.AddFunc(Func)
+    worker.sched.IncrStatFunc(Func)
     return nil
 }
 
