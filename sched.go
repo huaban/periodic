@@ -18,8 +18,50 @@ type Sched struct {
     jobQueue         *list.List
     entryPoint       string
     JobLocker        *sync.Mutex
-    Funcs            []string
-    FuncLocker       *sync.Mutex
+    Funcs            map[string]*FuncStat
+}
+
+
+type FuncStat struct {
+    TotalWorker int
+    TotalJob    int
+    DoingJob    int
+}
+
+
+func (stat *FuncStat) IncrWorker() int {
+    stat.TotalWorker += 1
+    return stat.TotalWorker
+}
+
+
+func (stat *FuncStat) DecrWorker() int {
+    stat.TotalWorker -= 1
+    return stat.TotalWorker
+}
+
+
+func (stat *FuncStat) IncrJob() int {
+    stat.TotalJob += 1
+    return stat.TotalJob
+}
+
+
+func (stat *FuncStat) DecrJob() int {
+    stat.TotalJob -= 1
+    return stat.TotalJob
+}
+
+
+func (stat *FuncStat) IncrDoing() int {
+    stat.DoingJob += 1
+    return stat.DoingJob
+}
+
+
+func (stat *FuncStat) DecrDoing() int {
+    stat.DoingJob -= 1
+    return stat.DoingJob
 }
 
 
@@ -31,8 +73,7 @@ func NewSched(entryPoint string) *Sched {
     sched.jobQueue = list.New()
     sched.entryPoint = entryPoint
     sched.JobLocker = new(sync.Mutex)
-    sched.FuncLocker = new(sync.Mutex)
-    sched.Funcs = make([]string, 0)
+    sched.Funcs = make(map[string]*FuncStat)
     return sched
 }
 
@@ -86,7 +127,12 @@ func (sched *Sched) Done(jobId int64) {
     defer sched.JobLocker.Unlock()
     sched.JobLocker.Lock()
     removeListJob(sched.jobQueue, jobId)
-    db.DelJob(jobId)
+    job, err := db.GetJob(jobId)
+    if err == nil {
+        job.Delete()
+        sched.RemoveJob(job)
+        sched.RemoveDoing(job)
+    }
     return
 }
 
@@ -106,6 +152,7 @@ func (sched *Sched) isDoJob(job db.Job) bool {
             if newJob.Status == "doing" {
                 newJob.Status = "ready"
                 newJob.Save()
+                sched.RemoveDoing(newJob)
             }
             sched.jobQueue.Remove(e)
             continue
@@ -150,6 +197,7 @@ func (sched *Sched) SubmitJob(worker *Worker, job db.Job) {
     job.Status = "doing"
     job.RunAt = current
     job.Save()
+    sched.AddDoing(job)
     sched.jobQueue.PushBack(job)
     sched.removeGrabQueue(worker)
 }
@@ -168,9 +216,13 @@ func (sched *Sched) handle() {
         }
 
         isFirst = true
-        for _, Func := range sched.Funcs {
+        for Func, stat := range sched.Funcs {
+            if stat.TotalWorker == 0 || (stat.TotalJob > 0 && stat.DoingJob < stat.TotalJob) {
+                continue
+            }
             jobs, err := db.RangeSchedJob(Func, "ready", 0, 0)
             if err != nil || len(jobs) == 0 {
+                stat.TotalJob = stat.DoingJob
                 continue
             }
 
@@ -236,28 +288,56 @@ func (sched *Sched) Fail(jobId int64) {
 
 
 func (sched *Sched) AddFunc(Func string) {
-    defer sched.FuncLocker.Unlock()
-    sched.FuncLocker.Lock()
-    for _, f := range sched.Funcs {
-        if f == Func {
-            return
-        }
+    stat, ok := sched.Funcs[Func]
+    if !ok {
+        stat = new(FuncStat)
+        sched.Funcs[Func] = stat
     }
-    sched.Funcs = append(sched.Funcs, Func)
+    stat.IncrWorker()
 }
 
 
 func (sched *Sched) RemoveFunc(Func string) {
-    defer sched.FuncLocker.Unlock()
-    sched.FuncLocker.Lock()
-    newFuncs := make([]string, 0)
-    for _, f := range sched.Funcs {
-        if f == Func {
-            continue
-        }
-        newFuncs = append(newFuncs, f)
+    stat, ok := sched.Funcs[Func]
+    if ok {
+        stat.DecrWorker()
     }
-    sched.Funcs = newFuncs
+}
+
+
+func (sched *Sched) AddJob(job db.Job) {
+    stat, ok := sched.Funcs[job.Func]
+    if !ok {
+        stat = new(FuncStat)
+        sched.Funcs[job.Func] = stat
+    }
+    stat.IncrJob()
+}
+
+
+func (sched *Sched) RemoveJob(job db.Job) {
+    stat, ok := sched.Funcs[job.Func]
+    if ok {
+        stat.DecrJob()
+    }
+}
+
+
+func (sched *Sched) AddDoing(job db.Job) {
+    stat, ok := sched.Funcs[job.Func]
+    if !ok {
+        stat = new(FuncStat)
+        sched.Funcs[job.Func] = stat
+    }
+    stat.IncrDoing()
+}
+
+
+func (sched *Sched) RemoveDoing(job db.Job) {
+    stat, ok := sched.Funcs[job.Func]
+    if ok {
+        stat.DecrDoing()
+    }
 }
 
 
@@ -271,6 +351,7 @@ func (sched *Sched) SchedLater(jobId int64, delay int64) {
     var now = time.Now()
     job.SchedAt = int64(now.Unix()) + delay
     job.Save()
+    sched.RemoveDoing(job)
     return
 }
 
@@ -300,6 +381,7 @@ func (sched *Sched) checkJobQueue() {
                 removeQueue = append(removeQueue, job)
                 continue
             }
+            sched.AddJob(job)
             if job.Status != "doing" {
                 continue
             }
@@ -311,6 +393,7 @@ func (sched *Sched) checkJobQueue() {
                 updateQueue = append(updateQueue, job)
             } else {
                 sched.jobQueue.PushBack(job)
+                sched.AddDoing(job)
             }
         }
     }
