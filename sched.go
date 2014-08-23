@@ -376,7 +376,7 @@ func (sched *Sched) checkJobQueue() {
     current := int64(now.Unix())
 
     for start = 0; start < int(total); start += limit {
-        jobs, _ := db.RangeJob(start, start + limit)
+        jobs, _ := db.RangeJob(start, start + limit - 1)
         for _, job := range jobs {
             if job.Name == "" {
                 removeQueue = append(removeQueue, job)
