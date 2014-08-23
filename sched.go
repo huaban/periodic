@@ -217,7 +217,7 @@ func (sched *Sched) handle() {
 
         isFirst = true
         for Func, stat := range sched.Funcs {
-            if stat.TotalWorker == 0 || (stat.TotalJob > 0 && stat.DoingJob < stat.TotalJob) {
+            if stat.TotalWorker == 0 || (stat.TotalJob > 0 && stat.DoingJob == stat.TotalJob) {
                 continue
             }
             jobs, err := db.RangeSchedJob(Func, "ready", 0, 0)
