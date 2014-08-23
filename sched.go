@@ -23,9 +23,9 @@ type Sched struct {
 
 
 type FuncStat struct {
-    TotalWorker int
-    TotalJob    int
-    DoingJob    int
+    TotalWorker int `json:"worker_count"`
+    TotalJob    int `json:"job_count"`
+    DoingJob    int `json:"doing"`
 }
 
 
