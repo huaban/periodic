@@ -150,9 +150,9 @@ func (sched *Sched) isDoJob(job db.Job) bool {
         if chk.Timeout > 0 && runAt + chk.Timeout < current {
             newJob, _ := db.GetJob(chk.Id)
             if newJob.Status == "doing" {
+                sched.DecrStatProc(newJob)
                 newJob.Status = "ready"
                 newJob.Save()
-                sched.DecrStatProc(newJob)
             }
             sched.jobQueue.Remove(e)
             continue
@@ -281,9 +281,9 @@ func (sched *Sched) Fail(jobId int64) {
     sched.JobLocker.Lock()
     removeListJob(sched.jobQueue, jobId)
     job, _ := db.GetJob(jobId)
+    sched.DecrStatProc(job)
     job.Status = "ready"
     job.Save()
-    sched.DecrStatProc(job)
     return
 }
 
@@ -330,13 +330,15 @@ func (sched *Sched) IncrStatProc(job db.Job) {
         stat = new(FuncStat)
         sched.Funcs[job.Func] = stat
     }
-    stat.IncrProc()
+    if job.Status == "doing" {
+        stat.IncrProc()
+    }
 }
 
 
 func (sched *Sched) DecrStatProc(job db.Job) {
     stat, ok := sched.Funcs[job.Func]
-    if ok {
+    if ok && job.Status == "doing" {
         stat.DecrProc()
     }
 }
@@ -348,11 +350,11 @@ func (sched *Sched) SchedLater(jobId int64, delay int64) {
     sched.JobLocker.Lock()
     removeListJob(sched.jobQueue, jobId)
     job, _ := db.GetJob(jobId)
+    sched.DecrStatProc(job)
     job.Status = "ready"
     var now = time.Now()
     job.SchedAt = int64(now.Unix()) + delay
     job.Save()
-    sched.DecrStatProc(job)
     return
 }
 
