@@ -189,7 +189,7 @@ func (sched *Sched) SubmitJob(worker *Worker, job db.Job) {
     }
     if err := worker.HandleDo(job); err != nil {
         worker.alive = false
-        sched.DieWorker(worker)
+        go sched.DieWorker(worker)
         return
     }
     now := time.Now()
