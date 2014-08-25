@@ -53,13 +53,13 @@ func (stat *FuncStat) DecrJob() uint {
 }
 
 
-func (stat *FuncStat) IncrDoing() uint {
+func (stat *FuncStat) IncrProc() uint {
     stat.ProcJob += 1
     return stat.ProcJob
 }
 
 
-func (stat *FuncStat) DecrDoing() uint {
+func (stat *FuncStat) DecrProc() uint {
     stat.ProcJob -= 1
     return stat.ProcJob
 }
@@ -330,14 +330,14 @@ func (sched *Sched) IncrStatProc(job db.Job) {
         stat = new(FuncStat)
         sched.Funcs[job.Func] = stat
     }
-    stat.IncrDoing()
+    stat.IncrProc()
 }
 
 
 func (sched *Sched) DecrStatProc(job db.Job) {
     stat, ok := sched.Funcs[job.Func]
     if ok {
-        stat.DecrDoing()
+        stat.DecrProc()
     }
 }
 
