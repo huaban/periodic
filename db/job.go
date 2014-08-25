@@ -8,6 +8,11 @@ import (
     "strconv"
 )
 
+const (
+    JOB_STATUS_READY = "ready"
+    JOB_STATUS_PROC  = "doing"
+)
+
 // func name  unique key
 // func status sched_at
 type Job struct {

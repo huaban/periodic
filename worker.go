@@ -64,12 +64,7 @@ func (worker *Worker) HandleDo(job db.Job) (err error){
         return nil
     }
     err = worker.conn.Send(pack)
-    if err != nil {
-        return err
-    }
-    job.Status = "doing"
-    job.Save()
-    return nil
+    return
 }
 
 

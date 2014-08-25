@@ -149,9 +149,9 @@ func (sched *Sched) isDoJob(job db.Job) bool {
         }
         if chk.Timeout > 0 && runAt + chk.Timeout < current {
             newJob, _ := db.GetJob(chk.Id)
-            if newJob.Status == "doing" {
+            if newJob.Status == db.JOB_STATUS_PROC {
                 sched.DecrStatProc(newJob)
-                newJob.Status = "ready"
+                newJob.Status = db.JOB_STATUS_READY
                 newJob.Save()
             }
             sched.jobQueue.Remove(e)
@@ -194,7 +194,7 @@ func (sched *Sched) SubmitJob(worker *Worker, job db.Job) {
     }
     now := time.Now()
     current := int64(now.Unix())
-    job.Status = "doing"
+    job.Status = db.JOB_STATUS_PROC
     job.RunAt = current
     job.Save()
     sched.IncrStatProc(job)
@@ -220,7 +220,7 @@ func (sched *Sched) handle() {
             if stat.TotalWorker == 0 || (stat.TotalJob > 0 && stat.ProcJob == stat.TotalJob) {
                 continue
             }
-            jobs, err := db.RangeSchedJob(Func, "ready", 0, 0)
+            jobs, err := db.RangeSchedJob(Func, db.JOB_STATUS_READY, 0, 0)
             if err != nil || len(jobs) == 0 {
                 stat.TotalJob = stat.ProcJob
                 continue
@@ -282,7 +282,7 @@ func (sched *Sched) Fail(jobId int64) {
     removeListJob(sched.jobQueue, jobId)
     job, _ := db.GetJob(jobId)
     sched.DecrStatProc(job)
-    job.Status = "ready"
+    job.Status = db.JOB_STATUS_READY
     job.Save()
     return
 }
@@ -330,7 +330,7 @@ func (sched *Sched) IncrStatProc(job db.Job) {
         stat = new(FuncStat)
         sched.Funcs[job.Func] = stat
     }
-    if job.Status == "doing" {
+    if job.Status == db.JOB_STATUS_PROC {
         stat.IncrProc()
     }
 }
@@ -338,7 +338,7 @@ func (sched *Sched) IncrStatProc(job db.Job) {
 
 func (sched *Sched) DecrStatProc(job db.Job) {
     stat, ok := sched.Funcs[job.Func]
-    if ok && job.Status == "doing" {
+    if ok && job.Status == db.JOB_STATUS_PROC {
         stat.DecrProc()
     }
 }
@@ -351,7 +351,7 @@ func (sched *Sched) SchedLater(jobId int64, delay int64) {
     removeListJob(sched.jobQueue, jobId)
     job, _ := db.GetJob(jobId)
     sched.DecrStatProc(job)
-    job.Status = "ready"
+    job.Status = db.JOB_STATUS_READY
     var now = time.Now()
     job.SchedAt = int64(now.Unix()) + delay
     job.Save()
@@ -385,7 +385,7 @@ func (sched *Sched) checkJobQueue() {
                 continue
             }
             sched.IncrStatJob(job)
-            if job.Status != "doing" {
+            if job.Status != db.JOB_STATUS_PROC {
                 continue
             }
             runAt := job.RunAt
@@ -402,7 +402,7 @@ func (sched *Sched) checkJobQueue() {
     }
 
     for _, job := range updateQueue {
-        job.Status = "ready"
+        job.Status = db.JOB_STATUS_READY
         job.Save()
     }
 

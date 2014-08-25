@@ -51,13 +51,13 @@ func api(mart *martini.ClassicMartini, sched *Sched) {
             Args: j.Args,
             Timeout: j.Timeout,
             SchedAt: j.SchedAt,
-            Status: "ready",
+            Status: db.JOB_STATUS_READY,
         }
         is_new := true
         jobId, _ := db.GetIndex("job:" + job.Func + ":name", job.Name)
         if jobId > 0 {
             job.Id = jobId
-            if oldJob, err := db.GetJob(jobId); err == nil && oldJob.Status == "doing" {
+            if oldJob, err := db.GetJob(jobId); err == nil && oldJob.Status == db.JOB_STATUS_PROC {
                 sched.DecrStatProc(oldJob)
             }
             is_new = false
@@ -169,7 +169,7 @@ func api(mart *martini.ClassicMartini, sched *Sched) {
             r.JSON(http.StatusOK, map[string]interface{}{"err": err.Error()})
             return
         }
-        if job.Status == "doing" {
+        if job.Status == db.JOB_STATUS_PROC {
             sched.DecrStatProc(job)
         }
         sched.DecrStatJob(job)
@@ -190,9 +190,9 @@ func api(mart *martini.ClassicMartini, sched *Sched) {
         var count int64
         count, _ = db.CountJob()
         status["total"] = count
-        count, _ = db.CountSchedJob(Func, "ready")
+        count, _ = db.CountSchedJob(Func, db.JOB_STATUS_READY)
         status["ready"] = count
-        count, _ = db.CountSchedJob(Func, "doing")
+        count, _ = db.CountSchedJob(Func, db.JOB_STATUS_PROC)
         status["doing"] = count
         status["worker_count"] = int64(sched.TotalWorkerCount)
         r.JSON(http.StatusOK, status)
