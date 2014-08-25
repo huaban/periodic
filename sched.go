@@ -23,43 +23,43 @@ type Sched struct {
 
 
 type FuncStat struct {
-    TotalWorker int `json:"worker_count"`
-    TotalJob    int `json:"job_count"`
-    ProcJob    int `json:"processing"`
+    TotalWorker uint `json:"worker_count"`
+    TotalJob    uint `json:"job_count"`
+    ProcJob     uint `json:"processing"`
 }
 
 
-func (stat *FuncStat) IncrWorker() int {
+func (stat *FuncStat) IncrWorker() uint {
     stat.TotalWorker += 1
     return stat.TotalWorker
 }
 
 
-func (stat *FuncStat) DecrWorker() int {
+func (stat *FuncStat) DecrWorker() uint {
     stat.TotalWorker -= 1
     return stat.TotalWorker
 }
 
 
-func (stat *FuncStat) IncrJob() int {
+func (stat *FuncStat) IncrJob() uint {
     stat.TotalJob += 1
     return stat.TotalJob
 }
 
 
-func (stat *FuncStat) DecrJob() int {
+func (stat *FuncStat) DecrJob() uint {
     stat.TotalJob -= 1
     return stat.TotalJob
 }
 
 
-func (stat *FuncStat) IncrDoing() int {
+func (stat *FuncStat) IncrDoing() uint {
     stat.ProcJob += 1
     return stat.ProcJob
 }
 
 
-func (stat *FuncStat) DecrDoing() int {
+func (stat *FuncStat) DecrDoing() uint {
     stat.ProcJob -= 1
     return stat.ProcJob
 }
