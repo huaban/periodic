@@ -211,4 +211,7 @@ func (worker *Worker) Close() {
     for e := worker.jobQueue.Front(); e != nil; e = e.Next() {
         worker.sched.Fail(e.Value.(db.Job).Id)
     }
+    for _, Func := range worker.Funcs {
+        worker.sched.DecrStatFunc(Func)
+    }
 }
