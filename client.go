@@ -46,6 +46,9 @@ func (client *Client) Handle() {
         case STATUS:
             err = client.HandleStatus()
             break
+        case PING:
+            err = conn.Send(packCmd(PONG))
+            break
         default:
             err = conn.Send(packCmd(UNKNOWN))
             break
