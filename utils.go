@@ -12,9 +12,6 @@ import (
 )
 
 
-var NULL_CHAR = []byte("\x01")
-
-
 func sockCheck(sockFile string) {
     _, err := os.Stat(sockFile)
     if err == nil || os.IsExist(err) {

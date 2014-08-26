@@ -7,12 +7,6 @@ import (
 )
 
 
-const (
-    SUBMIT_JOB = iota
-    STATUS
-)
-
-
 type Client struct {
     sched *Sched
     conn Conn

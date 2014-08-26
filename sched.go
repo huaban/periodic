@@ -11,12 +11,6 @@ import (
 )
 
 
-const (
-    TYPE_CLIENT = 1
-    TYPE_WORKER = 2
-)
-
-
 type Sched struct {
     TotalWorkerCount int
     timer            *time.Timer

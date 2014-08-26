@@ -18,6 +18,9 @@ PONG        = b"\x0A"
 # other
 SLEEP       = b"\x0B"
 UNKNOWN     = b"\x0C"
+# client command
+SUBMIT_JOB = b"\x0D"
+STATUS = b"\x0E"
 
 NULL_CHAR = b"\x01"
 
@@ -26,11 +29,6 @@ NULL_CHAR = b"\x01"
 
 TYPE_CLINET = b"\x01"
 TYPE_WORKER = b"\x02"
-
-# client command
-
-SUBMIT_JOB = b"\x01"
-STATUS = b"\x02"
 
 
 def to_bytes(s):
