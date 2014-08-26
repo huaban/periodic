@@ -23,7 +23,7 @@ class Worker(object):
             except Exception:
                 pass
         self._agent = BaseClient(reader, writer)
-        self._agent.send(utils.TYPE_WORKER)
+        yield from self._agent.send(utils.TYPE_WORKER)
         self.connected = True
         return True
 
