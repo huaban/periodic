@@ -11,6 +11,12 @@ import (
 )
 
 
+const (
+    TYPE_CLIENT = 1
+    TYPE_WORKER = 2
+)
+
+
 type Sched struct {
     TotalWorkerCount int
     timer            *time.Timer
@@ -115,10 +121,27 @@ func (sched *Sched) DieWorker(worker *Worker) {
 }
 
 func (sched *Sched) HandleConnection(conn net.Conn) {
-    worker := NewWorker(sched, Conn{Conn: conn})
-    sched.TotalWorkerCount += 1
-    log.Printf("Total worker: %d\n", sched.TotalWorkerCount)
-    go worker.Handle()
+    c := Conn{Conn: conn}
+    payload, err := c.Receive()
+    if err != nil {
+        return
+    }
+    switch payload[0] {
+    case TYPE_CLIENT:
+        client := NewClient(sched, c)
+        go client.Handle()
+        break
+    case TYPE_WORKER:
+        worker := NewWorker(sched, c)
+        sched.TotalWorkerCount += 1
+        log.Printf("Total worker: %d\n", sched.TotalWorkerCount)
+        go worker.Handle()
+        break
+    default:
+        log.Printf("Unsupport client %d\n", payload[0])
+        c.Close()
+        break
+    }
 }
 
 
