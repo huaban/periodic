@@ -21,6 +21,18 @@ UNKNOWN     = b"\x0C"
 
 NULL_CHAR = b"\x01"
 
+
+# client type
+
+TYPE_CLINET = b"\x01"
+TYPE_WORKER = b"\x02"
+
+# client command
+
+SUBMIT_JOB = b"\x01"
+STATUS = b"\x02"
+
+
 def to_bytes(s):
     if isinstance(s, bytes):
         return s

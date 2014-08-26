@@ -2,8 +2,9 @@ from .job import Job
 from .utils import BaseClient
 from . import utils
 import asyncio
+import json
 
-class Worker(object):
+class Client(object):
     def __init__(self):
         self._agent = None
         self.connected = False
@@ -23,7 +24,7 @@ class Worker(object):
             except Exception:
                 pass
         self._agent = BaseClient(reader, writer)
-        self._agent.send(utils.TYPE_WORKER)
+        self._agent.send(utils.TYPE_CLIENT)
         self.connected = True
         return True
 
@@ -54,18 +55,18 @@ class Worker(object):
         return False
 
 
-    def grabJob(self):
-        yield from self._agent.send(utils.GRAB_JOB)
+    def submitJob(self, job):
+        yield from self._agent.send([utils.SUBMIT_JOB, json.dumps(job)])
         payload = yield from self._agent.recive()
-        if payload == utils.NO_JOB or payload == utils.WAIT_JOB:
-            return None
-
-        return Job(payload, self._agent)
-
-
-    def add_func(self, func):
-        yield from self._agent.send([utils.CAN_DO, func])
+        if payload == b"ok":
+            return True
+        else:
+            return False
 
 
-    def remove_func(self, func):
-        yield from self._agent.send(utils.CANT_DO, func)
+
+    def status(self):
+        yield from self._agent.send([utils.STATUS])
+        payload = yield from self._agent.recive()
+
+        return json.loads(str(payload, "utf-8"))
