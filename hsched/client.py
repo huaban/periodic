@@ -1,4 +1,3 @@
-from .job import Job
 from .utils import BaseClient
 from . import utils
 import asyncio
