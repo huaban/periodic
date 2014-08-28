@@ -7,8 +7,6 @@ class Client(object):
     def __init__(self):
         self._agent = None
         self.connected = False
-        self._conn_lock = asyncio.Lock()
-
 
     def _connect(self):
         if self._entryPoint.startswith("unix://"):
