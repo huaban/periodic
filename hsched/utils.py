@@ -27,7 +27,7 @@ NULL_CHAR = b"\x01"
 
 # client type
 
-TYPE_CLINET = b"\x01"
+TYPE_CLIENT = b"\x01"
 TYPE_WORKER = b"\x02"
 
 
