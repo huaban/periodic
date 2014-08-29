@@ -21,6 +21,7 @@ UNKNOWN     = b"\x0C"
 # client command
 SUBMIT_JOB = b"\x0D"
 STATUS = b"\x0E"
+DROP_FUNC = b"\x0F"
 
 NULL_CHAR = b"\x01"
 

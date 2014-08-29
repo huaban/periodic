@@ -21,6 +21,7 @@ const (
     // client command
     SUBMIT_JOB  // client
     STATUS      // client
+    DROP_FUNC   // client
 )
 
 

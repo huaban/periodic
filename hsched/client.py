@@ -61,9 +61,17 @@ class Client(object):
             return False
 
 
-
     def status(self):
         yield from self._agent.send([utils.STATUS])
         payload = yield from self._agent.recive()
 
         return json.loads(str(payload, "utf-8"))
+
+
+    def dropFunc(self, func):
+        yield from self._agent.send([utils.DROP_FUNC, func])
+        payload = yield from self._agent.recive()
+        if payload == b"ok":
+            return True
+        else:
+            return False
