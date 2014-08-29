@@ -5,9 +5,10 @@ package main
 import (
     "flag"
     "huabot-sched/db"
+    sch "huabot-sched/sched"
 )
 
-var sched *Sched
+var sched *sch.Sched
 
 var redisPort string
 var entryPoint string
@@ -24,10 +25,10 @@ func init() {
 
 func main() {
     db.Connect(redisPort)
-    sched = NewSched(entryPoint)
+    sched = sch.NewSched(entryPoint)
     if len(addr) > 0 {
         go sched.Serve()
-        StartHttpServer(addr, sched)
+        sch.StartHttpServer(addr, sched)
     } else {
         sched.Serve()
     }

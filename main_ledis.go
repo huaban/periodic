@@ -5,10 +5,11 @@ package main
 import (
     "flag"
     "huabot-sched/db"
+    sch "huabot-sched/sched"
     "github.com/siddontang/ledisdb/config"
 )
 
-var sched *Sched
+var sched *sch.Sched
 
 var configFile string
 var entryPoint string
@@ -33,10 +34,10 @@ func main() {
         }
     }
     db.Connect(cfg)
-    sched = NewSched(entryPoint)
+    sched = sch.NewSched(entryPoint)
     if len(addr) > 0 {
         go sched.Serve()
-        StartHttpServer(addr, sched)
+        sch.StartHttpServer(addr, sched)
     } else {
         sched.Serve()
     }
