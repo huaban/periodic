@@ -7,6 +7,7 @@ class Client(object):
     def __init__(self):
         self._agent = None
         self.connected = False
+        self._locker = asyncio.Lock()
 
     def _connect(self):
         if self._entryPoint.startswith("unix://"):
@@ -21,7 +22,8 @@ class Client(object):
             except Exception:
                 pass
         self._agent = BaseClient(reader, writer)
-        yield from self._agent.send(utils.TYPE_CLIENT)
+        with (yield from self._locker):
+            yield from self._agent.send(utils.TYPE_CLIENT)
         self.connected = True
         return True
 
@@ -45,16 +47,18 @@ class Client(object):
 
 
     def ping(self):
-        yield from self._agent.send(utils.PING)
-        payload = yield from self._agent.recive()
+        with (yield from self._locker):
+            yield from self._agent.send(utils.PING)
+            payload = yield from self._agent.recive()
         if payload == utils.PONG:
             return True
         return False
 
 
     def submitJob(self, job):
-        yield from self._agent.send([utils.SUBMIT_JOB, json.dumps(job)])
-        payload = yield from self._agent.recive()
+        with (yield from self._locker):
+            yield from self._agent.send([utils.SUBMIT_JOB, json.dumps(job)])
+            payload = yield from self._agent.recive()
         if payload == b"ok":
             return True
         else:
@@ -62,15 +66,17 @@ class Client(object):
 
 
     def status(self):
-        yield from self._agent.send([utils.STATUS])
-        payload = yield from self._agent.recive()
+        with (yield from self._locker):
+            yield from self._agent.send([utils.STATUS])
+            payload = yield from self._agent.recive()
 
         return json.loads(str(payload, "utf-8"))
 
 
     def dropFunc(self, func):
-        yield from self._agent.send([utils.DROP_FUNC, func])
-        payload = yield from self._agent.recive()
+        with (yield from self._locker):
+            yield from self._agent.send([utils.DROP_FUNC, func])
+            payload = yield from self._agent.recive()
         if payload == b"ok":
             return True
         else:

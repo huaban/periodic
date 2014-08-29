@@ -7,6 +7,7 @@ class Worker(object):
     def __init__(self):
         self._agent = None
         self.connected = False
+        self._locker = asyncio.Lock()
 
 
     def _connect(self):
@@ -22,7 +23,8 @@ class Worker(object):
             except Exception:
                 pass
         self._agent = BaseClient(reader, writer)
-        yield from self._agent.send(utils.TYPE_WORKER)
+        with (yield from self._locker):
+            yield from self._agent.send(utils.TYPE_WORKER)
         self.connected = True
         return True
 
@@ -46,16 +48,18 @@ class Worker(object):
 
 
     def ping(self):
-        yield from self._agent.send(utils.PING)
-        payload = yield from self._agent.recive()
+        with (yield from self._locker):
+            yield from self._agent.send(utils.PING)
+            payload = yield from self._agent.recive()
         if payload == utils.PONG:
             return True
         return False
 
 
     def grabJob(self):
-        yield from self._agent.send(utils.GRAB_JOB)
-        payload = yield from self._agent.recive()
+        with (yield from self._locker):
+            yield from self._agent.send(utils.GRAB_JOB)
+            payload = yield from self._agent.recive()
         if payload == utils.NO_JOB or payload == utils.WAIT_JOB:
             return None
 
@@ -63,8 +67,10 @@ class Worker(object):
 
 
     def add_func(self, func):
-        yield from self._agent.send([utils.CAN_DO, func])
+        with (yield from self._locker):
+            yield from self._agent.send([utils.CAN_DO, func])
 
 
     def remove_func(self, func):
-        yield from self._agent.send(utils.CANT_DO, func)
+        with (yield from self._locker):
+            yield from self._agent.send(utils.CANT_DO, func)
