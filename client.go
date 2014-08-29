@@ -66,6 +66,7 @@ func (client *Client) HandleSubmitJob(payload []byte) (err error) {
         return
     }
     is_new := true
+    job.Status = db.JOB_STATUS_READY
     jobId, _ := db.GetIndex("job:" + job.Func + ":name", job.Name)
     if jobId > 0 {
         job.Id = jobId
