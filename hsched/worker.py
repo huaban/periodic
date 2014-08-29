@@ -63,7 +63,7 @@ class Worker(object):
         if payload == utils.NO_JOB or payload == utils.WAIT_JOB:
             return None
 
-        return Job(payload, self._agent)
+        return Job(payload, self._agent, self._locker)
 
 
     def add_func(self, func):

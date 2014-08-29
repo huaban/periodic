@@ -4,12 +4,12 @@ from . import utils
 
 class Job(object):
 
-    def __init__(self, payload, client):
+    def __init__(self, payload, client, locker):
         payload = payload.split(utils.NULL_CHAR)
         self.payload = json.loads(str(payload[0], "UTF-8"))
         self.job_handle = str(payload[1], "UTF-8")
         self.client = client
-        self._locker = client._locker
+        self._locker = locker
 
 
     def get(self, key, default=None):
