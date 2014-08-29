@@ -66,7 +66,7 @@ func (stat *FuncStat) DecrProc() uint {
 
 
 func NewSched(entryPoint string) *Sched {
-    sched = new(Sched)
+    sched := new(Sched)
     sched.TotalWorkerCount = 0
     sched.timer = time.NewTimer(1 * time.Hour)
     sched.grabQueue = list.New()
