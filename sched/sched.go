@@ -22,46 +22,22 @@ type Sched struct {
 }
 
 
+type Counter uint
+
+func (c *Counter) Incr() {
+    *c = *c + 1
+}
+
+
+func (c *Counter) Decr() {
+    *c = *c - 1
+}
+
+
 type FuncStat struct {
-    TotalWorker uint `json:"worker_count"`
-    TotalJob    uint `json:"job_count"`
-    ProcJob     uint `json:"processing"`
-}
-
-
-func (stat *FuncStat) IncrWorker() uint {
-    stat.TotalWorker += 1
-    return stat.TotalWorker
-}
-
-
-func (stat *FuncStat) DecrWorker() uint {
-    stat.TotalWorker -= 1
-    return stat.TotalWorker
-}
-
-
-func (stat *FuncStat) IncrJob() uint {
-    stat.TotalJob += 1
-    return stat.TotalJob
-}
-
-
-func (stat *FuncStat) DecrJob() uint {
-    stat.TotalJob -= 1
-    return stat.TotalJob
-}
-
-
-func (stat *FuncStat) IncrProc() uint {
-    stat.ProcJob += 1
-    return stat.ProcJob
-}
-
-
-func (stat *FuncStat) DecrProc() uint {
-    stat.ProcJob -= 1
-    return stat.ProcJob
+    TotalWorker Counter `json:"worker_count"`
+    TotalJob    Counter `json:"job_count"`
+    ProcJob     Counter `json:"processing"`
 }
 
 
@@ -311,14 +287,14 @@ func (sched *Sched) IncrStatFunc(Func string) {
         stat = new(FuncStat)
         sched.Funcs[Func] = stat
     }
-    stat.IncrWorker()
+    stat.TotalWorker.Incr()
 }
 
 
 func (sched *Sched) DecrStatFunc(Func string) {
     stat, ok := sched.Funcs[Func]
     if ok {
-        stat.DecrWorker()
+        stat.TotalWorker.Decr()
     }
 }
 
@@ -329,14 +305,14 @@ func (sched *Sched) IncrStatJob(job db.Job) {
         stat = new(FuncStat)
         sched.Funcs[job.Func] = stat
     }
-    stat.IncrJob()
+    stat.TotalJob.Incr()
 }
 
 
 func (sched *Sched) DecrStatJob(job db.Job) {
     stat, ok := sched.Funcs[job.Func]
     if ok {
-        stat.DecrJob()
+        stat.TotalJob.Decr()
     }
 }
 
@@ -348,7 +324,7 @@ func (sched *Sched) IncrStatProc(job db.Job) {
         sched.Funcs[job.Func] = stat
     }
     if job.Status == db.JOB_STATUS_PROC {
-        stat.IncrProc()
+        stat.ProcJob.Incr()
     }
 }
 
@@ -356,7 +332,7 @@ func (sched *Sched) IncrStatProc(job db.Job) {
 func (sched *Sched) DecrStatProc(job db.Job) {
     stat, ok := sched.Funcs[job.Func]
     if ok && job.Status == db.JOB_STATUS_PROC {
-        stat.DecrProc()
+        stat.ProcJob.Decr()
     }
 }
 
