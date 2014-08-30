@@ -11,7 +11,6 @@ import (
 
 
 type Sched struct {
-    TotalWorkerCount int
     timer            *time.Timer
     grabQueue        *list.List
     jobQueue         *list.List
@@ -43,7 +42,6 @@ type FuncStat struct {
 
 func NewSched(entryPoint string, store Storer) *Sched {
     sched := new(Sched)
-    sched.TotalWorkerCount = 0
     sched.timer = time.NewTimer(1 * time.Hour)
     sched.grabQueue = list.New()
     sched.jobQueue = list.New()
@@ -85,8 +83,6 @@ func (sched *Sched) Notify() {
 
 func (sched *Sched) DieWorker(worker *Worker) {
     defer sched.Notify()
-    sched.TotalWorkerCount -= 1
-    log.Printf("Total worker: %d\n", sched.TotalWorkerCount)
     sched.removeGrabQueue(worker)
     worker.Close()
 }
@@ -104,8 +100,6 @@ func (sched *Sched) HandleConnection(conn net.Conn) {
         break
     case TYPE_WORKER:
         worker := NewWorker(sched, c)
-        sched.TotalWorkerCount += 1
-        log.Printf("Total worker: %d\n", sched.TotalWorkerCount)
         go worker.Handle()
         break
     default:
