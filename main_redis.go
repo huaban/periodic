@@ -5,6 +5,7 @@ package main
 import (
     "flag"
     "huabot-sched/db"
+    "huabot-sched/store"
     sch "huabot-sched/sched"
 )
 
@@ -25,7 +26,7 @@ func init() {
 
 func main() {
     db.Connect(redisPort)
-    sched = sch.NewSched(entryPoint)
+    sched = sch.NewSched(entryPoint, store.RedisStorer{})
     if len(addr) > 0 {
         go sched.Serve()
         sch.StartHttpServer(addr, sched)
