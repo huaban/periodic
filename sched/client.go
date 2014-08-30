@@ -104,7 +104,7 @@ func (client *Client) HandleDropFunc(payload []byte) (err error) {
     Func := string(payload)
     stat, ok := client.sched.Funcs[Func]
     sched := client.sched
-    if ok && stat.TotalWorker == 0 {
+    if ok && stat.Worker == 0 {
         if jobs, e := sched.store.GetAllByFunc(Func, JOB_STATUS_READY, 0, -1); e == nil {
             for _, job := range jobs {
                 sched.DecrStatJob(job)

@@ -34,9 +34,9 @@ func (c *Counter) Decr() {
 
 
 type FuncStat struct {
-    TotalWorker Counter `json:"worker_count"`
-    TotalJob    Counter `json:"job_count"`
-    ProcJob     Counter `json:"processing"`
+    Worker Counter `json:"worker_count"`
+    Job    Counter `json:"job_count"`
+    Processing     Counter `json:"processing"`
 }
 
 
@@ -205,7 +205,7 @@ func (sched *Sched) handle() {
 
         isFirst = true
         for Func, stat := range sched.Funcs {
-            if stat.TotalWorker == 0 || (stat.TotalJob > 0 && stat.ProcJob == stat.TotalJob) {
+            if stat.Worker == 0 || (stat.Job > 0 && stat.Processing == stat.Job) {
                 continue
             }
             job, err := sched.store.Next(Func)
@@ -281,14 +281,14 @@ func (sched *Sched) IncrStatFunc(Func string) {
         stat = new(FuncStat)
         sched.Funcs[Func] = stat
     }
-    stat.TotalWorker.Incr()
+    stat.Worker.Incr()
 }
 
 
 func (sched *Sched) DecrStatFunc(Func string) {
     stat, ok := sched.Funcs[Func]
     if ok {
-        stat.TotalWorker.Decr()
+        stat.Worker.Decr()
     }
 }
 
@@ -299,14 +299,14 @@ func (sched *Sched) IncrStatJob(job Job) {
         stat = new(FuncStat)
         sched.Funcs[job.Func] = stat
     }
-    stat.TotalJob.Incr()
+    stat.Job.Incr()
 }
 
 
 func (sched *Sched) DecrStatJob(job Job) {
     stat, ok := sched.Funcs[job.Func]
     if ok {
-        stat.TotalJob.Decr()
+        stat.Job.Decr()
     }
 }
 
@@ -318,7 +318,7 @@ func (sched *Sched) IncrStatProc(job Job) {
         sched.Funcs[job.Func] = stat
     }
     if job.Status == JOB_STATUS_PROC {
-        stat.ProcJob.Incr()
+        stat.Processing.Incr()
     }
 }
 
@@ -326,7 +326,7 @@ func (sched *Sched) IncrStatProc(job Job) {
 func (sched *Sched) DecrStatProc(job Job) {
     stat, ok := sched.Funcs[job.Func]
     if ok && job.Status == JOB_STATUS_PROC {
-        stat.ProcJob.Decr()
+        stat.Processing.Decr()
     }
 }
 
