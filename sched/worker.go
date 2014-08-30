@@ -3,7 +3,6 @@ package sched
 import (
     "log"
     "container/list"
-    "huabot-sched/db"
     "strconv"
     "bytes"
 )
@@ -34,7 +33,7 @@ func (worker *Worker) IsAlive() bool {
 }
 
 
-func (worker *Worker) HandleDo(job db.Job) (err error){
+func (worker *Worker) HandleDo(job Job) (err error){
     log.Printf("HandleDo: %d\n", job.Id)
     worker.jobQueue.PushBack(job)
     pack, err := packJob(job)
@@ -188,7 +187,7 @@ func (worker *Worker) Handle() {
 func (worker *Worker) Close() {
     worker.conn.Close()
     for e := worker.jobQueue.Front(); e != nil; e = e.Next() {
-        worker.sched.Fail(e.Value.(db.Job).Id)
+        worker.sched.Fail(e.Value.(Job).Id)
     }
     for _, Func := range worker.Funcs {
         worker.sched.DecrStatFunc(Func)

@@ -8,7 +8,6 @@ import (
     "strconv"
     "encoding/json"
     "container/list"
-    "huabot-sched/db"
 )
 
 
@@ -25,7 +24,7 @@ func sockCheck(sockFile string) {
 }
 
 
-func packJob(job db.Job) ([]byte, error) {
+func packJob(job Job) ([]byte, error) {
     jobStr, err := json.Marshal(job)
     if err != nil {
         return nil, err
@@ -39,7 +38,7 @@ func packJob(job db.Job) ([]byte, error) {
 
 func removeListJob(l *list.List, jobId int64) {
     for e := l.Front(); e != nil; e = e.Next() {
-        if e.Value.(db.Job).Id == jobId {
+        if e.Value.(Job).Id == jobId {
             l.Remove(e)
             break
         }

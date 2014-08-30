@@ -7,7 +7,6 @@ import (
     "sync"
     "strings"
     "container/list"
-    "huabot-sched/db"
 )
 
 
@@ -19,6 +18,7 @@ type Sched struct {
     entryPoint       string
     JobLocker        *sync.Mutex
     Funcs            map[string]*FuncStat
+    store            Storer
 }
 
 
@@ -41,7 +41,7 @@ type FuncStat struct {
 }
 
 
-func NewSched(entryPoint string) *Sched {
+func NewSched(entryPoint string, store Storer) *Sched {
     sched := new(Sched)
     sched.TotalWorkerCount = 0
     sched.timer = time.NewTimer(1 * time.Hour)
@@ -50,6 +50,7 @@ func NewSched(entryPoint string) *Sched {
     sched.entryPoint = entryPoint
     sched.JobLocker = new(sync.Mutex)
     sched.Funcs = make(map[string]*FuncStat)
+    sched.store = store
     return sched
 }
 
@@ -120,9 +121,9 @@ func (sched *Sched) Done(jobId int64) {
     defer sched.JobLocker.Unlock()
     sched.JobLocker.Lock()
     removeListJob(sched.jobQueue, jobId)
-    job, err := db.GetJob(jobId)
+    job, err := sched.store.Get(jobId)
     if err == nil {
-        job.Delete()
+        sched.store.Delete(jobId)
         sched.DecrStatJob(job)
         sched.DecrStatProc(job)
     }
@@ -130,28 +131,28 @@ func (sched *Sched) Done(jobId int64) {
 }
 
 
-func (sched *Sched) isDoJob(job db.Job) bool {
+func (sched *Sched) isDoJob(job Job) bool {
     now := time.Now()
     current := int64(now.Unix())
     ret := false
     for e := sched.jobQueue.Front(); e != nil; e = e.Next() {
-        chk := e.Value.(db.Job)
+        chk := e.Value.(Job)
         runAt := chk.RunAt
         if runAt < chk.SchedAt {
             runAt = chk.SchedAt
         }
         if chk.Timeout > 0 && runAt + chk.Timeout < current {
-            newJob, _ := db.GetJob(chk.Id)
-            if newJob.Status == db.JOB_STATUS_PROC {
+            newJob, _ := sched.store.Get(chk.Id)
+            if newJob.Status == JOB_STATUS_PROC {
                 sched.DecrStatProc(newJob)
-                newJob.Status = db.JOB_STATUS_READY
-                newJob.Save()
+                newJob.Status = JOB_STATUS_READY
+                sched.store.Save(newJob)
             }
             sched.jobQueue.Remove(e)
             continue
         }
         if chk.Id == job.Id {
-            old := e.Value.(db.Job)
+            old := e.Value.(Job)
             runAt := old.RunAt
             if runAt < old.SchedAt {
                 runAt = old.SchedAt
@@ -167,11 +168,11 @@ func (sched *Sched) isDoJob(job db.Job) bool {
 }
 
 
-func (sched *Sched) SubmitJob(worker *Worker, job db.Job) {
+func (sched *Sched) SubmitJob(worker *Worker, job Job) {
     defer sched.JobLocker.Unlock()
     sched.JobLocker.Lock()
     if job.Name == "" {
-        job.Delete()
+        sched.store.Delete(job.Id)
         return
     }
     if sched.isDoJob(job) {
@@ -187,9 +188,9 @@ func (sched *Sched) SubmitJob(worker *Worker, job db.Job) {
     }
     now := time.Now()
     current := int64(now.Unix())
-    job.Status = db.JOB_STATUS_PROC
+    job.Status = JOB_STATUS_PROC
     job.RunAt = current
-    job.Save()
+    sched.store.Save(job)
     sched.IncrStatProc(job)
     sched.jobQueue.PushBack(job)
     sched.removeGrabQueue(worker)
@@ -199,7 +200,7 @@ func (sched *Sched) SubmitJob(worker *Worker, job db.Job) {
 func (sched *Sched) handle() {
     var current time.Time
     var timestamp int64
-    var schedJob db.Job
+    var schedJob Job
     var isFirst bool
     for {
         if sched.grabQueue.Len() == 0 {
@@ -213,20 +214,19 @@ func (sched *Sched) handle() {
             if stat.TotalWorker == 0 || (stat.TotalJob > 0 && stat.ProcJob == stat.TotalJob) {
                 continue
             }
-            jobs, err := db.RangeSchedJob(Func, db.JOB_STATUS_READY, 0, 0)
-            if err != nil || len(jobs) == 0 {
-                stat.TotalJob = stat.ProcJob
+            job, err := sched.store.Next(Func)
+            if err != nil {
                 continue
             }
 
             if isFirst {
-                schedJob = jobs[0]
+                schedJob = job
                 isFirst = false
                 continue
             }
 
-            if schedJob.SchedAt > jobs[0].SchedAt {
-                schedJob = jobs[0]
+            if schedJob.SchedAt > job.SchedAt {
+                schedJob = job
             }
         }
         if isFirst {
@@ -273,10 +273,10 @@ func (sched *Sched) Fail(jobId int64) {
     defer sched.JobLocker.Unlock()
     sched.JobLocker.Lock()
     removeListJob(sched.jobQueue, jobId)
-    job, _ := db.GetJob(jobId)
+    job, err := sched.store.Get(jobId)
     sched.DecrStatProc(job)
-    job.Status = db.JOB_STATUS_READY
-    job.Save()
+    job.Status = JOB_STATUS_READY
+    sched.store.Save(job)
     return
 }
 
@@ -299,7 +299,7 @@ func (sched *Sched) DecrStatFunc(Func string) {
 }
 
 
-func (sched *Sched) IncrStatJob(job db.Job) {
+func (sched *Sched) IncrStatJob(job Job) {
     stat, ok := sched.Funcs[job.Func]
     if !ok {
         stat = new(FuncStat)
@@ -309,7 +309,7 @@ func (sched *Sched) IncrStatJob(job db.Job) {
 }
 
 
-func (sched *Sched) DecrStatJob(job db.Job) {
+func (sched *Sched) DecrStatJob(job Job) {
     stat, ok := sched.Funcs[job.Func]
     if ok {
         stat.TotalJob.Decr()
@@ -317,21 +317,21 @@ func (sched *Sched) DecrStatJob(job db.Job) {
 }
 
 
-func (sched *Sched) IncrStatProc(job db.Job) {
+func (sched *Sched) IncrStatProc(job Job) {
     stat, ok := sched.Funcs[job.Func]
     if !ok {
         stat = new(FuncStat)
         sched.Funcs[job.Func] = stat
     }
-    if job.Status == db.JOB_STATUS_PROC {
+    if job.Status == JOB_STATUS_PROC {
         stat.ProcJob.Incr()
     }
 }
 
 
-func (sched *Sched) DecrStatProc(job db.Job) {
+func (sched *Sched) DecrStatProc(job Job) {
     stat, ok := sched.Funcs[job.Func]
-    if ok && job.Status == db.JOB_STATUS_PROC {
+    if ok && job.Status == JOB_STATUS_PROC {
         stat.ProcJob.Decr()
     }
 }
@@ -342,12 +342,12 @@ func (sched *Sched) SchedLater(jobId int64, delay int64) {
     defer sched.JobLocker.Unlock()
     sched.JobLocker.Lock()
     removeListJob(sched.jobQueue, jobId)
-    job, _ := db.GetJob(jobId)
+    job, err := sched.store.Get(jobId)
     sched.DecrStatProc(job)
-    job.Status = db.JOB_STATUS_READY
+    job.Status = JOB_STATUS_READY
     var now = time.Now()
     job.SchedAt = int64(now.Unix()) + delay
-    job.Save()
+    sched.store.Save(job)
     return
 }
 
@@ -364,21 +364,21 @@ func (sched *Sched) removeGrabQueue(worker *Worker) {
 func (sched *Sched) checkJobQueue() {
     start := 0
     limit := 20
-    total, _ := db.CountJob()
-    updateQueue := make([]db.Job, 0)
-    removeQueue := make([]db.Job, 0)
+    total, _ := sched.store.Count()
+    updateQueue := make([]Job, 0)
+    removeQueue := make([]Job, 0)
     var now = time.Now()
     current := int64(now.Unix())
 
     for start = 0; start < int(total); start += limit {
-        jobs, _ := db.RangeJob(start, start + limit - 1)
+        jobs, _ := sched.store.GetAll(start, start + limit - 1)
         for _, job := range jobs {
             if job.Name == "" {
                 removeQueue = append(removeQueue, job)
                 continue
             }
             sched.IncrStatJob(job)
-            if job.Status != db.JOB_STATUS_PROC {
+            if job.Status != JOB_STATUS_PROC {
                 continue
             }
             runAt := job.RunAt
@@ -395,12 +395,12 @@ func (sched *Sched) checkJobQueue() {
     }
 
     for _, job := range updateQueue {
-        job.Status = db.JOB_STATUS_READY
-        job.Save()
+        job.Status = JOB_STATUS_READY
+        sched.store.Save(job)
     }
 
     for _, job := range removeQueue {
-        job.Delete()
+        sched.store.Delete(job.Id)
     }
 }
 

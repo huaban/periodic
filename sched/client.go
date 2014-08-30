@@ -2,7 +2,6 @@ package sched
 
 import (
     "log"
-    "huabot-sched/db"
     "encoding/json"
 )
 
@@ -59,7 +58,7 @@ func (client *Client) Handle() {
 
 
 func (client *Client) HandleSubmitJob(payload []byte) (err error) {
-    var job db.Job
+    var job Job
     var e error
     var conn = client.conn
     var sched = client.sched
@@ -69,16 +68,16 @@ func (client *Client) HandleSubmitJob(payload []byte) (err error) {
         return
     }
     is_new := true
-    job.Status = db.JOB_STATUS_READY
-    jobId, _ := db.GetIndex("job:" + job.Func + ":name", job.Name)
-    if jobId > 0 {
-        job.Id = jobId
-        if oldJob, e := db.GetJob(jobId); e == nil && oldJob.Status == db.JOB_STATUS_PROC {
+    job.Status = JOB_STATUS_READY
+    oldJob, e := sched.store.GetOneByFunc(job.Func, job.Name)
+    if e == nil && oldJob.Id > 0 {
+        job.Id = oldJob.Id
+        if oldJob.Status == JOB_STATUS_PROC {
             sched.DecrStatProc(oldJob)
         }
         is_new = false
     }
-    e = job.Save()
+    e = sched.store.Save(job)
     if e != nil {
         err = conn.Send([]byte(e.Error()))
         return
@@ -104,19 +103,20 @@ func (client *Client) HandleStatus() (err error) {
 func (client *Client) HandleDropFunc(payload []byte) (err error) {
     Func := string(payload)
     stat, ok := client.sched.Funcs[Func]
+    sched := client.sched
     if ok && stat.TotalWorker == 0 {
-        if jobs, e := db.RangeSchedJob(Func, db.JOB_STATUS_READY, 0, -1); e == nil {
+        if jobs, e := sched.store.GetAllByFunc(Func, JOB_STATUS_READY, 0, -1); e == nil {
             for _, job := range jobs {
-                client.sched.DecrStatJob(job)
-                job.Delete()
+                sched.DecrStatJob(job)
+                sched.store.Delete(job.Id)
             }
         }
 
-        if jobs, e := db.RangeSchedJob(Func, db.JOB_STATUS_PROC, 0, -1); e == nil {
+        if jobs, e := sched.store.GetAllByFunc(Func, JOB_STATUS_PROC, 0, -1); e == nil {
             for _, job := range jobs {
-                client.sched.DecrStatJob(job)
-                client.sched.DecrStatProc(job)
-                job.Delete()
+                sched.DecrStatJob(job)
+                sched.DecrStatProc(job)
+                sched.store.Delete(job.Id)
             }
         }
     }
