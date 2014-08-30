@@ -273,7 +273,7 @@ func (sched *Sched) Fail(jobId int64) {
     defer sched.JobLocker.Unlock()
     sched.JobLocker.Lock()
     removeListJob(sched.jobQueue, jobId)
-    job, err := sched.store.Get(jobId)
+    job, _ := sched.store.Get(jobId)
     sched.DecrStatProc(job)
     job.Status = JOB_STATUS_READY
     sched.store.Save(job)
@@ -342,7 +342,7 @@ func (sched *Sched) SchedLater(jobId int64, delay int64) {
     defer sched.JobLocker.Unlock()
     sched.JobLocker.Lock()
     removeListJob(sched.jobQueue, jobId)
-    job, err := sched.store.Get(jobId)
+    job, _ := sched.store.Get(jobId)
     sched.DecrStatProc(job)
     job.Status = JOB_STATUS_READY
     var now = time.Now()
@@ -362,15 +362,15 @@ func (sched *Sched) removeGrabQueue(worker *Worker) {
 
 
 func (sched *Sched) checkJobQueue() {
-    start := 0
-    limit := 20
+    start := int64(0)
+    limit := int64(20)
     total, _ := sched.store.Count()
     updateQueue := make([]Job, 0)
     removeQueue := make([]Job, 0)
     var now = time.Now()
     current := int64(now.Unix())
 
-    for start = 0; start < int(total); start += limit {
+    for start = 0; start < total; start += limit {
         jobs, _ := sched.store.GetAll(start, start + limit - 1)
         for _, job := range jobs {
             if job.Name == "" {
