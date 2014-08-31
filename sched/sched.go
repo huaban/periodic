@@ -203,7 +203,6 @@ func (sched *Sched) SubmitJob(worker *Worker, job Job) {
 func (sched *Sched) handle() {
     var current time.Time
     var timestamp int64
-    var schedJob Job
     for {
         if sched.grabQueue.Len() == 0 {
             sched.timer.Reset(time.Minute)
