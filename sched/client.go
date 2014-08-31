@@ -3,6 +3,7 @@ package sched
 import (
     "log"
     "encoding/json"
+    "container/heap"
 )
 
 
@@ -69,7 +70,7 @@ func (client *Client) HandleSubmitJob(payload []byte) (err error) {
     }
     is_new := true
     job.Status = JOB_STATUS_READY
-    oldJob, e := sched.store.GetOneByFunc(job.Func, job.Name)
+    oldJob, e := sched.store.GetOne(job.Func, job.Name)
     if e == nil && oldJob.Id > 0 {
         job.Id = oldJob.Id
         if oldJob.Status == JOB_STATUS_PROC {
@@ -78,6 +79,12 @@ func (client *Client) HandleSubmitJob(payload []byte) (err error) {
         is_new = false
     }
     e = sched.store.Save(job)
+    pq := sched.pq[job.Func]
+    item := &Item{
+        value: job.Id,
+        priority: job.SchedAt,
+    }
+    heap.Push(&pq, item)
     if e != nil {
         err = conn.Send([]byte(e.Error()))
         return
@@ -105,20 +112,18 @@ func (client *Client) HandleDropFunc(payload []byte) (err error) {
     stat, ok := client.sched.Funcs[Func]
     sched := client.sched
     if ok && stat.Worker == 0 {
-        if jobs, e := sched.store.GetAllByFunc(Func, JOB_STATUS_READY, 0, -1); e == nil {
-            for _, job := range jobs {
-                sched.DecrStatJob(job)
-                sched.store.Delete(job.Id)
-            }
+        iter := sched.store.NewIterator(payload, nil)
+        deleteJob := make([]int64, 0)
+        for iter.Next() {
+            job := iter.Value()
+            deleteJob = append(deleteJob, job.Id)
         }
-
-        if jobs, e := sched.store.GetAllByFunc(Func, JOB_STATUS_PROC, 0, -1); e == nil {
-            for _, job := range jobs {
-                sched.DecrStatJob(job)
-                sched.DecrStatProc(job)
-                sched.store.Delete(job.Id)
-            }
+        iter.Close()
+        for _, jobId := range deleteJob {
+            sched.store.Delete(jobId)
         }
+        delete(client.sched.Funcs, Func)
+        delete(client.sched.pq, Func)
     }
     err = client.conn.Send([]byte("ok"))
     return

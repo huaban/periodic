@@ -7,6 +7,7 @@ import (
     "sync"
     "strings"
     "container/list"
+    "container/heap"
 )
 
 
@@ -18,6 +19,7 @@ type Sched struct {
     JobLocker        *sync.Mutex
     Funcs            map[string]*FuncStat
     store            Storer
+    pq               map[string]PriorityQueue
 }
 
 
@@ -49,6 +51,7 @@ func NewSched(entryPoint string, store Storer) *Sched {
     sched.JobLocker = new(sync.Mutex)
     sched.Funcs = make(map[string]*FuncStat)
     sched.store = store
+    sched.pq = make(map[string]PriorityQueue)
     return sched
 }
 
@@ -141,6 +144,12 @@ func (sched *Sched) isDoJob(job Job) bool {
                 sched.DecrStatProc(newJob)
                 newJob.Status = JOB_STATUS_READY
                 sched.store.Save(newJob)
+                pq := sched.pq[newJob.Func]
+                item := &Item{
+                    value: newJob.Id,
+                    priority: newJob.SchedAt,
+                }
+                heap.Push(&pq, item)
             }
             sched.jobQueue.Remove(e)
             continue
@@ -195,7 +204,6 @@ func (sched *Sched) handle() {
     var current time.Time
     var timestamp int64
     var schedJob Job
-    var isFirst bool
     for {
         if sched.grabQueue.Len() == 0 {
             sched.timer.Reset(time.Minute)
@@ -203,32 +211,54 @@ func (sched *Sched) handle() {
             continue
         }
 
-        isFirst = true
-        for Func, stat := range sched.Funcs {
-            if stat.Worker == 0 || (stat.Job > 0 && stat.Processing == stat.Job) {
-                continue
-            }
-            job, err := sched.store.Next(Func)
-            if err != nil {
+        maybeItem := make(map[string]*Item)
+        for Func, _ := range sched.Funcs {
+            pq, ok := sched.pq[Func]
+            if !ok || pq.Len() == 0 {
                 continue
             }
 
-            if isFirst {
-                schedJob = job
-                isFirst = false
-                continue
-            }
+            item := heap.Pop(&pq).(*Item)
 
-            if schedJob.SchedAt > job.SchedAt {
-                schedJob = job
-            }
+            maybeItem[Func] = item
+
         }
-        if isFirst {
+
+        if len(maybeItem) == 0 {
             sched.timer.Reset(time.Minute)
             current =<-sched.timer.C
+        }
+
+        var lessItem *Item
+        var lessFunc string
+
+        for Func, item := range maybeItem {
+            if lessItem == nil {
+                lessItem = item
+                lessFunc = Func
+                continue
+            }
+            if lessItem.priority > item.priority {
+                lessItem = item
+                lessFunc = Func
+            }
+        }
+
+        for Func, item := range maybeItem {
+            if Func == lessFunc {
+                continue
+            }
+            pq := sched.pq[Func]
+            heap.Push(&pq, item)
+        }
+
+        schedJob, err := sched.store.Get(lessItem.value)
+
+        if err != nil {
             continue
         }
 
+        pq := sched.pq[schedJob.Func]
         timestamp = int64(time.Now().Unix())
 
         if schedJob.SchedAt > timestamp {
@@ -236,6 +266,7 @@ func (sched *Sched) handle() {
             current =<-sched.timer.C
             timestamp = int64(current.Unix())
             if schedJob.SchedAt > timestamp {
+                heap.Push(&pq, lessItem)
                 continue
             }
         }
@@ -271,6 +302,12 @@ func (sched *Sched) Fail(jobId int64) {
     sched.DecrStatProc(job)
     job.Status = JOB_STATUS_READY
     sched.store.Save(job)
+    pq := sched.pq[job.Func]
+    item := &Item{
+        value: job.Id,
+        priority: job.SchedAt,
+    }
+    heap.Push(&pq, item)
     return
 }
 
@@ -342,6 +379,12 @@ func (sched *Sched) SchedLater(jobId int64, delay int64) {
     var now = time.Now()
     job.SchedAt = int64(now.Unix()) + delay
     sched.store.Save(job)
+    pq := sched.pq[job.Func]
+    item := &Item{
+        value: job.Id,
+        priority: job.SchedAt,
+    }
+    heap.Push(&pq, item)
     return
 }
 
@@ -370,6 +413,17 @@ func (sched *Sched) checkJobQueue() {
         }
         sched.IncrStatJob(job)
         if job.Status != JOB_STATUS_PROC {
+            pq, ok := sched.pq[job.Func]
+            if !ok {
+                pq = make(PriorityQueue, 0)
+                sched.pq[job.Func] = pq
+                heap.Init(&pq)
+            }
+            item := &Item{
+                value: job.Id,
+                priority: job.SchedAt,
+            }
+            heap.Push(&pq, item)
             continue
         }
         runAt := job.RunAt

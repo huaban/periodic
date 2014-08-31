@@ -24,7 +24,7 @@ type Storer interface {
     Delete(jobId int64) error
     Get(jobId int64) (Job, error)
     Count() (int64, error)
-    GetOne([]byte) (Job, error)
+    GetOne(string, string) (Job, error)
     NewIterator([]byte, []byte) JobIterator
 }
 
