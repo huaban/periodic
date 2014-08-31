@@ -46,7 +46,7 @@ func (r RedisStorer) GetOne(Func string, jobName string) (job sched.Job, err err
 
 
 func (r RedisStorer) NewIterator(Func, Status []byte) sched.JobIterator {
-    return RedisIterator{
+    return &RedisIterator{
         Func: Func,
         Status: Status,
         cursor: 0,
@@ -68,9 +68,8 @@ type RedisIterator struct {
     limit  int
 }
 
-func (iter RedisIterator) Next() bool {
+func (iter *RedisIterator) Next() bool {
     iter.cursor += 1
-    return false
     if len(iter.cacheJob) > 0 && len(iter.cacheJob) > iter.cursor {
         return true
     }
@@ -101,16 +100,16 @@ func (iter RedisIterator) Next() bool {
 }
 
 
-func (iter RedisIterator) Value() sched.Job {
+func (iter *RedisIterator) Value() sched.Job {
     return iter.cacheJob[iter.cursor]
 }
 
 
-func (iter RedisIterator) Error() error {
+func (iter *RedisIterator) Error() error {
     return iter.err
 }
 
 
-func (iter RedisIterator) Close() {
+func (iter *RedisIterator) Close() {
 
 }
