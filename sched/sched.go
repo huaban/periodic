@@ -356,37 +356,35 @@ func (sched *Sched) removeGrabQueue(worker *Worker) {
 
 
 func (sched *Sched) checkJobQueue() {
-    start := int64(0)
-    limit := int64(20)
-    total, _ := sched.store.Count()
     updateQueue := make([]Job, 0)
     removeQueue := make([]Job, 0)
     var now = time.Now()
     current := int64(now.Unix())
 
-    for start = 0; start < total; start += limit {
-        jobs, _ := sched.store.GetAll(start, start + limit - 1)
-        for _, job := range jobs {
-            if job.Name == "" {
-                removeQueue = append(removeQueue, job)
-                continue
-            }
-            sched.IncrStatJob(job)
-            if job.Status != JOB_STATUS_PROC {
-                continue
-            }
-            runAt := job.RunAt
-            if runAt < job.SchedAt {
-                runAt = job.SchedAt
-            }
-            if runAt + job.Timeout < current {
-                updateQueue = append(updateQueue, job)
-            } else {
-                sched.jobQueue.PushBack(job)
-                sched.IncrStatProc(job)
-            }
+    iter := sched.store.NewIterator(nil, nil)
+    for iter.Next() {
+        job := iter.Value()
+        if job.Name == "" {
+            removeQueue = append(removeQueue, job)
+            continue
+        }
+        sched.IncrStatJob(job)
+        if job.Status != JOB_STATUS_PROC {
+            continue
+        }
+        runAt := job.RunAt
+        if runAt < job.SchedAt {
+            runAt = job.SchedAt
+        }
+        if runAt + job.Timeout < current {
+            updateQueue = append(updateQueue, job)
+        } else {
+            sched.jobQueue.PushBack(job)
+            sched.IncrStatProc(job)
         }
     }
+
+    iter.Close()
 
     for _, job := range updateQueue {
         job.Status = JOB_STATUS_READY
