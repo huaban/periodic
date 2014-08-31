@@ -404,7 +404,7 @@ func (sched *Sched) checkJobQueue() {
     current := int64(now.Unix())
 
     iter := sched.store.NewIterator(nil, nil)
-    for iter.Next() {
+    for ;; iter.Next() {
         job := iter.Value()
         if job.Name == "" {
             removeQueue = append(removeQueue, job)

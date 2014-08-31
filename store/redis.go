@@ -34,17 +34,7 @@ func (r RedisStorer) Count() (int64, error) {
 }
 
 
-func (r RedisStorer) Next(Func string) (job sched.Job, err error) {
-    jobs, err := db.RangeSchedJob(Func, db.JOB_STATUS_READY, 0, 0)
-    if len(jobs) == 0 {
-        return job, err
-    }
-    job = sched.Job(jobs[0])
-    return job, err
-}
-
-
-func (r RedisStorer) GetOneByFunc(Func string, jobName string) (job sched.Job, err error) {
+func (r RedisStorer) GetOne(Func string, jobName string) (job sched.Job, err error) {
     jobId, _ := db.GetIndex("job:" + Func + ":name", jobName)
     if jobId > 0 {
         dbJob, err := db.GetJob(jobId)
@@ -54,27 +44,73 @@ func (r RedisStorer) GetOneByFunc(Func string, jobName string) (job sched.Job, e
     return
 }
 
-func (r RedisStorer) GetAll(start int64, stop int64) (jobs []sched.Job, err error) {
-    dbJobs, err := db.RangeJob(int(start), int(stop))
-    if err != nil {
-        return jobs, err
+
+func (r RedisStorer) NewIterator(Func, Status []byte) sched.JobIterator {
+    return RedisIterator{
+        Func: Func,
+        Status: Status,
+        cursor: 0,
+        cacheJob: make([]sched.Job, 0),
+        start: 0,
+        limit: 20,
+        err: nil,
     }
-    jobs = make([]sched.Job, len(dbJobs))
-    for idx, job := range dbJobs {
-        jobs[idx] = sched.Job(job)
-    }
-    return
 }
 
 
-func (r RedisStorer) GetAllByFunc(Func string, jobStatus string, start int64, stop int64) (jobs []sched.Job, err error) {
-    dbJobs, err := db.RangeSchedJob(Func, jobStatus, int(start), int(stop))
-    if err != nil {
-        return jobs, err
+type RedisIterator struct {
+    Func   []byte
+    Status []byte
+    cursor int
+    err    error
+    cacheJob []sched.Job
+    start  int
+    limit  int
+}
+
+func (iter RedisIterator) Next() bool {
+    iter.cursor += 1
+    return false
+    if len(iter.cacheJob) > 0 && len(iter.cacheJob) > iter.cursor {
+        return true
     }
-    jobs = make([]sched.Job, len(dbJobs))
+    start := iter.start
+    stop := iter.start + iter.limit - 1
+    iter.start = iter.start + iter.limit
+    var err error
+    var dbJobs []db.Job
+    if iter.Func == nil && iter.Status == nil {
+        dbJobs, err = db.RangeJob(start, stop)
+    } else {
+        dbJobs, err = db.RangeSchedJob(string(iter.Func), string(iter.Status), start, stop)
+    }
+    if err != nil {
+        iter.err = err
+        return false
+    }
+    if len(dbJobs) == 0 {
+        return false
+    }
+    jobs := make([]sched.Job, len(dbJobs))
     for idx, job := range dbJobs {
         jobs[idx] = sched.Job(job)
     }
-    return
+    iter.cacheJob = jobs
+    iter.cursor = 0
+    return true
+}
+
+
+func (iter RedisIterator) Value() sched.Job {
+    return iter.cacheJob[iter.cursor]
+}
+
+
+func (iter RedisIterator) Error() error {
+    return iter.err
+}
+
+
+func (iter RedisIterator) Close() {
+
 }
