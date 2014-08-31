@@ -24,8 +24,19 @@ type Storer interface {
     Delete(jobId int64) error
     Get(jobId int64) (Job, error)
     Count() (int64, error)
-    Next(Func string) (Job, error)
-    GetOneByFunc(Func string, jobName string) (Job, error)
-    GetAll(start int64, stop int64) ([]Job, error)
-    GetAllByFunc(Func string, jobStatus string, start int64, stop int64) ([]Job, error)
+    GetOne([]byte) (Job, error)
+    NewIterator([]byte, []byte) JobIterator
+}
+
+
+type Iterator interface {
+    Next() bool
+}
+
+
+type JobIterator interface {
+    Iterator
+    Value() Job
+    Error() error
+    Close()
 }
