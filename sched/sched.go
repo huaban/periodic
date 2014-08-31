@@ -34,9 +34,9 @@ func (c *Counter) Decr() {
 
 
 type FuncStat struct {
-    Worker Counter `json:"worker_count"`
-    Job    Counter `json:"job_count"`
-    Processing     Counter `json:"processing"`
+    Worker     Counter `json:"worker_count"`
+    Job        Counter `json:"job_count"`
+    Processing Counter `json:"processing"`
 }
 
 
