@@ -81,3 +81,6 @@ class Client(object):
             return True
         else:
             return False
+
+    def close(self):
+        self._agent.close()

@@ -74,3 +74,7 @@ class Worker(object):
     def remove_func(self, func):
         with (yield from self._locker):
             yield from self._agent.send(utils.CANT_DO, func)
+
+
+    def close(self):
+        self._agent.close()
