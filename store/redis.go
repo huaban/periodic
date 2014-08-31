@@ -54,6 +54,7 @@ func (r RedisStorer) NewIterator(Func, Status []byte) sched.JobIterator {
         start: 0,
         limit: 20,
         err: nil,
+        curStatus: sched.JOB_STATUS_READY,
     }
 }
 
@@ -66,6 +67,7 @@ type RedisIterator struct {
     cacheJob []sched.Job
     start  int
     limit  int
+    curStatus string
 }
 
 func (iter *RedisIterator) Next() bool {
@@ -80,6 +82,14 @@ func (iter *RedisIterator) Next() bool {
     var dbJobs []db.Job
     if iter.Func == nil && iter.Status == nil {
         dbJobs, err = db.RangeJob(start, stop)
+    } else if iter.Status == nil {
+        dbJobs, err = db.RangeSchedJob(string(iter.Func), iter.curStatus, start, stop)
+        if len(dbJobs) == 0  && iter.curStatus == sched.JOB_STATUS_READY {
+            start = 0
+            stop = iter.limit - 1
+            iter.start = iter.limit
+            dbJobs, err = db.RangeSchedJob(string(iter.Func), sched.JOB_STATUS_PROC, start, stop)
+        }
     } else {
         dbJobs, err = db.RangeSchedJob(string(iter.Func), string(iter.Status), start, stop)
     }
