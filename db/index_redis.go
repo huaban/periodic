@@ -1,5 +1,3 @@
-// +build !ledis
-
 package db
 
 import (
