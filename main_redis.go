@@ -5,6 +5,7 @@ import (
     "huabot-sched/db"
     "huabot-sched/store"
     sch "huabot-sched/sched"
+    "huabot-sched/cmd"
     "github.com/codegangsta/cli"
 )
 
@@ -30,6 +31,15 @@ func main() {
         cli.BoolFlag{
             Name: "d",
             Usage: "Enable daemon mode",
+        },
+    }
+    app.Commands = []cli.Command{
+        {
+            Name: "status",
+            Usage: "Show status",
+            Action: func(c *cli.Context) {
+                cmd.ShowStatus(c.GlobalString("H"))
+            },
         },
     }
     app.Action = func(c *cli.Context) {
