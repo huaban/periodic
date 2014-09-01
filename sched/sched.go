@@ -403,7 +403,7 @@ func (sched *Sched) checkJobQueue() {
     var now = time.Now()
     current := int64(now.Unix())
 
-    iter := sched.store.NewIterator(nil, nil)
+    iter := sched.store.NewIterator(nil)
     for {
         if !iter.Next() {
             break

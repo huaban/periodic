@@ -118,7 +118,7 @@ func (client *Client) HandleDropFunc(payload []byte) (err error) {
     stat, ok := client.sched.Funcs[Func]
     sched := client.sched
     if ok && stat.Worker == 0 {
-        iter := sched.store.NewIterator(payload, nil)
+        iter := sched.store.NewIterator(payload)
         deleteJob := make([]int64, 0)
         for {
             if !iter.Next() {
