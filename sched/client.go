@@ -63,6 +63,9 @@ func (client *Client) HandleSubmitJob(payload []byte) (err error) {
     var e error
     var conn = client.conn
     var sched = client.sched
+    defer sched.Notify()
+    defer sched.JobLocker.Unlock()
+    sched.JobLocker.Lock()
     e = json.Unmarshal(payload, &job)
     if e != nil {
         err = conn.Send([]byte(e.Error()))
@@ -79,6 +82,11 @@ func (client *Client) HandleSubmitJob(payload []byte) (err error) {
         is_new = false
     }
     e = sched.store.Save(job)
+    if e != nil {
+        err = conn.Send([]byte(e.Error()))
+        return
+    }
+
     pq, ok := sched.pq[job.Func]
     if !ok {
         pq1 := make(PriorityQueue, 0)
@@ -91,10 +99,7 @@ func (client *Client) HandleSubmitJob(payload []byte) (err error) {
         priority: job.SchedAt,
     }
     heap.Push(pq, item)
-    if e != nil {
-        err = conn.Send([]byte(e.Error()))
-        return
-    }
+
     if is_new {
         sched.IncrStatJob(job)
     }
@@ -117,6 +122,9 @@ func (client *Client) HandleDropFunc(payload []byte) (err error) {
     Func := string(payload)
     stat, ok := client.sched.Funcs[Func]
     sched := client.sched
+    defer sched.Notify()
+    defer sched.JobLocker.Unlock()
+    sched.JobLocker.Lock()
     if ok && stat.Worker == 0 {
         iter := sched.store.NewIterator(payload)
         deleteJob := make([]int64, 0)
