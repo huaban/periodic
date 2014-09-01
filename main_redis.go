@@ -13,6 +13,7 @@ func main() {
     app := cli.NewApp()
     app.Name = "huabot-sched"
     app.Usage = ""
+    app.Version = "0.0.1"
     app.Flags = []cli.Flag {
         cli.StringFlag{
             Name: "H",
