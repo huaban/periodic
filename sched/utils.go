@@ -24,7 +24,7 @@ func sockCheck(sockFile string) {
 }
 
 
-func packJob(job Job) ([]byte, error) {
+func PackJob(job Job) ([]byte, error) {
     jobStr, err := json.Marshal(job)
     if err != nil {
         return nil, err
@@ -46,7 +46,7 @@ func removeListJob(l *list.List, jobId int64) {
 }
 
 
-func packCmd(i int) []byte {
+func PackCmd(i int) []byte {
     buf := bytes.NewBuffer(nil)
     buf.WriteByte(byte(i))
     return buf.Bytes()

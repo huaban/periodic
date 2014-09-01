@@ -41,13 +41,13 @@ func (client *Client) Handle() {
             err = client.HandleStatus()
             break
         case PING:
-            err = conn.Send(packCmd(PONG))
+            err = conn.Send(PackCmd(PONG))
             break
         case DROP_FUNC:
             err = client.HandleDropFunc(payload[2:])
             break
         default:
-            err = conn.Send(packCmd(UNKNOWN))
+            err = conn.Send(PackCmd(UNKNOWN))
             break
         }
         if err != nil {
