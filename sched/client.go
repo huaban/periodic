@@ -79,7 +79,13 @@ func (client *Client) HandleSubmitJob(payload []byte) (err error) {
         is_new = false
     }
     e = sched.store.Save(job)
-    pq := sched.pq[job.Func]
+    pq, ok := sched.pq[job.Func]
+    if !ok {
+        pq1 := make(PriorityQueue, 0)
+        pq = &pq1
+        sched.pq[job.Func] = pq
+        heap.Init(pq)
+    }
     item := &Item{
         value: job.Id,
         priority: job.SchedAt,
