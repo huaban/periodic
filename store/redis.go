@@ -36,7 +36,7 @@ func (r RedisStore) get(jobId int64) (job sched.Job, err error) {
     var data []byte
     var conn = r.pool.Get()
     defer conn.Close()
-    var key = REDIS_PREFIX + strconv.FormatInt(job.Id, 10)
+    var key = REDIS_PREFIX + strconv.FormatInt(jobId, 10)
     data, err = redis.Bytes(conn.Do("GET", key))
     if err != nil {
         return
