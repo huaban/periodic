@@ -2,72 +2,153 @@ package store
 
 
 import (
-    "huabot-sched/db"
+    "fmt"
+    "log"
+    "errors"
+    "strings"
+    "strconv"
+    "encoding/json"
     "huabot-sched/sched"
+    "github.com/garyburd/redigo/redis"
 )
 
 
-type RedisStorer struct {}
+const REDIS_PREFIX = "huabot-sched:job:"
 
 
-func (r RedisStorer) Save(job sched.Job) error {
-    dbJob := db.Job(job)
-    return dbJob.Save()
+type RedisStore struct {
+    pool *redis.Pool
 }
 
 
-func (r RedisStorer) Delete(jobId int64) error {
-    return db.DelJob(jobId)
+func NewRedisStore(server string) RedisStore {
+    parts := strings.SplitN(server, "://", 2)
+    pool := redis.NewPool(func() (conn redis.Conn, err error) {
+        conn, err = redis.Dial("tcp", parts[1])
+        return
+    }, 3)
+
+    return RedisStore{pool: pool,}
 }
 
 
-func (r RedisStorer) Get(jobId int64) (job sched.Job, err error) {
-    var dbJob db.Job
-    dbJob, err = db.GetJob(jobId)
-    job = sched.Job(dbJob)
+func (r RedisStore) get(jobId int64) (job sched.Job, err error) {
+    var data []byte
+    var conn = r.pool.Get()
+    defer conn.Close()
+    var key = REDIS_PREFIX + strconv.FormatInt(job.Id, 10)
+    data, err = redis.Bytes(conn.Do("GET", key))
+    if err != nil {
+        return
+    }
+    err = json.Unmarshal(data, &job)
     return
 }
 
 
-func (r RedisStorer) Count() (int64, error) {
-    return db.CountJob()
-}
-
-
-func (r RedisStorer) GetOne(Func string, jobName string) (job sched.Job, err error) {
-    jobId, _ := db.GetIndex("job:" + Func + ":name", jobName)
-    if jobId > 0 {
-        dbJob, err := db.GetJob(jobId)
-        job = sched.Job(dbJob)
-        return job, err
+func (r RedisStore) Save(job sched.Job) (err error) {
+    var key string
+    var prefix = REDIS_PREFIX + job.Func + ":"
+    var conn = r.pool.Get()
+    defer conn.Close()
+    if job.Id > 0 {
+        old, e := r.get(job.Id)
+        key = REDIS_PREFIX + strconv.FormatInt(job.Id, 10)
+        if e != nil || old.Id < 1 {
+            err = errors.New(fmt.Sprintf("Update Job %d fail, the old job is not exists.", job.Id))
+            return
+        }
+        if old.Name != job.Name {
+            if _, e := conn.Do("ZERM", prefix + "name", old.Name); e != nil {
+                log.Printf("DelIndex Error: %s %s\n", prefix + "name", old.Name)
+            }
+        }
+    } else {
+        job.Id, err = redis.Int64(conn.Do("INCRBY", REDIS_PREFIX + "sequence", 1))
+        if err != nil {
+            return
+        }
+    }
+    idx, _ := redis.Int64(conn.Do("ZSCORE", prefix + "name", job.Name))
+    if idx > 0 && idx != job.Id {
+        err = errors.New("Duplicate Job name: " + job.Name)
+        return
+    }
+    key = REDIS_PREFIX + strconv.FormatInt(job.Id, 10)
+    var data []byte
+    data, err = json.Marshal(job)
+    if err != nil {
+        return
+    }
+    _, err = conn.Do("SET", key, data)
+    if err == nil {
+        if _, e := conn.Do("ZADD", prefix + "name", job.Name, job.Id); e != nil {
+            log.Printf("DelIndex Error: %s %s\n",  prefix + "name", job.Name)
+        }
+        if _, e := conn.Do("ZADD", REDIS_PREFIX + "ID", strconv.FormatInt(job.Id, 10), job.Id); e != nil {
+            log.Printf("DelIndex Error: %s %s\n",  prefix + "name", job.Name)
+        }
     }
     return
 }
 
 
-func (r RedisStorer) NewIterator(Func, Status []byte) sched.JobIterator {
+func (r RedisStore) Delete(jobId int64) (err error) {
+    var key = REDIS_PREFIX + strconv.FormatInt(jobId, 10)
+    job, e := r.get(jobId)
+    if e != nil {
+        return e
+    }
+    var prefix = REDIS_PREFIX + job.Func + ":"
+
+    var conn = r.pool.Get()
+    defer conn.Close()
+
+    _, err = conn.Do("DEL", key)
+    conn.Do("ZREM", prefix + "name", job.Name)
+    conn.Do("ZREM", REDIS_PREFIX + "ID", strconv.FormatInt(job.Id, 10))
+    return
+}
+
+
+func (r RedisStore) Get(jobId int64) (job sched.Job, err error) {
+    job, err = r.get(jobId)
+    return
+}
+
+
+func (r RedisStore) GetOne(Func string, jobName string) (job sched.Job, err error) {
+    var conn = r.pool.Get()
+    defer conn.Close()
+    jobId, _ := redis.Int64(conn.Do("ZSCORE", REDIS_PREFIX + Func + ":name", jobName))
+    if jobId > 0 {
+        return r.get(jobId)
+    }
+    return
+}
+
+
+func (r RedisStore) NewIterator(Func []byte) sched.JobIterator {
     return &RedisIterator{
         Func: Func,
-        Status: Status,
         cursor: 0,
         cacheJob: make([]sched.Job, 0),
         start: 0,
         limit: 20,
         err: nil,
-        curStatus: sched.JOB_STATUS_READY,
+        r: r,
     }
 }
 
 
 type RedisIterator struct {
     Func   []byte
-    Status []byte
     cursor int
     err    error
     cacheJob []sched.Job
     start  int
     limit  int
-    curStatus string
+    r      RedisStore
 }
 
 func (iter *RedisIterator) Next() bool {
@@ -79,30 +160,27 @@ func (iter *RedisIterator) Next() bool {
     stop := iter.start + iter.limit - 1
     iter.start = iter.start + iter.limit
     var err error
-    var dbJobs []db.Job
-    if iter.Func == nil && iter.Status == nil {
-        dbJobs, err = db.RangeJob(start, stop)
-    } else if iter.Status == nil {
-        dbJobs, err = db.RangeSchedJob(string(iter.Func), iter.curStatus, start, stop)
-        if len(dbJobs) == 0  && iter.curStatus == sched.JOB_STATUS_READY {
-            start = 0
-            stop = iter.limit - 1
-            iter.start = iter.limit
-            dbJobs, err = db.RangeSchedJob(string(iter.Func), sched.JOB_STATUS_PROC, start, stop)
-        }
+
+    var conn = iter.r.pool.Get()
+    defer conn.Close()
+    var key string
+    if iter.Func == nil {
+        key = REDIS_PREFIX + "ID"
     } else {
-        dbJobs, err = db.RangeSchedJob(string(iter.Func), string(iter.Status), start, stop)
+        key = REDIS_PREFIX + string(iter.Func) + ":name"
     }
-    if err != nil {
-        iter.err = err
+
+    reply, err := redis.Values(conn.Do("ZRANGE", key, start, stop, "WITHSCORES"))
+    if err != nil || len(reply) == 0 {
         return false
     }
-    if len(dbJobs) == 0 {
-        return false
-    }
-    jobs := make([]sched.Job, len(dbJobs))
-    for idx, job := range dbJobs {
-        jobs[idx] = sched.Job(job)
+    var jobId int64
+    jobs := make([]sched.Job, len(reply)/2)
+    for k, v := range reply {
+        if k % 2 == 1 {
+            jobId, _ = strconv.ParseInt(string(v.([]byte)), 10, 0)
+            jobs[(k - 1) / 2], _ = iter.r.get(jobId)
+        }
     }
     iter.cacheJob = jobs
     iter.cursor = 0

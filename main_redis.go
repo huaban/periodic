@@ -2,7 +2,6 @@ package main
 
 import (
     "os"
-    "huabot-sched/db"
     "huabot-sched/store"
     sch "huabot-sched/sched"
     "huabot-sched/cmd"
@@ -44,8 +43,7 @@ func main() {
     }
     app.Action = func(c *cli.Context) {
         if c.Bool("d") {
-            db.Connect(c.String("redis"))
-            sched := sch.NewSched(c.String("H"), store.RedisStorer{})
+            sched := sch.NewSched(c.String("H"), store.NewRedisStore(c.String("redis")))
             sched.Serve()
         } else {
             cli.ShowAppHelp(c)
