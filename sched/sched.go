@@ -226,6 +226,7 @@ func (sched *Sched) handle() {
         if len(maybeItem) == 0 {
             sched.timer.Reset(time.Minute)
             current =<-sched.timer.C
+            continue
         }
 
         var lessItem *Item
