@@ -84,7 +84,7 @@ func (client *Client) HandleSubmitJob(payload []byte) (err error) {
         value: job.Id,
         priority: job.SchedAt,
     }
-    heap.Push(&pq, item)
+    heap.Push(pq, item)
     if e != nil {
         err = conn.Send([]byte(e.Error()))
         return
