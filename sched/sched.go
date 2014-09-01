@@ -417,7 +417,8 @@ func (sched *Sched) checkJobQueue() {
         if job.Status != JOB_STATUS_PROC {
             pq, ok := sched.pq[job.Func]
             if !ok {
-                *pq = make(PriorityQueue, 0)
+                pq1 := make(PriorityQueue, 0)
+                pq = &pq1
                 sched.pq[job.Func] = pq
                 heap.Init(pq)
             }
