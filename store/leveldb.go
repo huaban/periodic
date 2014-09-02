@@ -133,6 +133,7 @@ func (l LevelDBStore) NewIterator(Func []byte) sched.JobIterator {
     return &LevelDBIterator{
         l: l,
         iter: iter,
+        Func: Func,
     }
 }
 
@@ -146,6 +147,7 @@ func (l LevelDBStore) Close() error {
 type LevelDBIterator struct {
     l LevelDBStore
     iter iterator.Iterator
+    Func []byte
 }
 
 
@@ -156,6 +158,10 @@ func (iter *LevelDBIterator) Next() bool {
 
 func (iter *LevelDBIterator) Value() (job sched.Job) {
     data := iter.iter.Value()
+    if iter.Func == nil {
+        json.Unmarshal(data, &job)
+        return
+    }
     jobId, _ := strconv.ParseInt(string(data), 10, 64)
     job, _ = iter.l.Get(jobId)
     return
