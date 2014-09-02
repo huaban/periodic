@@ -2,6 +2,8 @@ package main
 
 import (
     "os"
+    "log"
+    "time"
     "huabot-sched/store"
     sch "huabot-sched/sched"
     "huabot-sched/cmd"
@@ -38,6 +40,53 @@ func main() {
             Usage: "Show status",
             Action: func(c *cli.Context) {
                 cmd.ShowStatus(c.GlobalString("H"))
+            },
+        },
+        {
+            Name: "submit",
+            Usage: "Submit job",
+            Flags: []cli.Flag {
+                cli.StringFlag{
+                    Name: "f",
+                    Value: "",
+                    Usage: "function name",
+                },
+                cli.StringFlag{
+                    Name: "n",
+                    Value: "",
+                    Usage: "job name",
+                },
+                cli.StringFlag{
+                    Name: "args",
+                    Value: "",
+                    Usage: "job workload",
+                },
+                cli.IntFlag{
+                    Name: "t",
+                    Value: 500,
+                    Usage: "job running timeout",
+                },
+                cli.IntFlag{
+                    Name: "sched_later",
+                    Value: 0,
+                    Usage: "job sched_later",
+                },
+            },
+            Action: func(c *cli.Context) {
+                var job = sch.Job{
+                    Name: c.String("n"),
+                    Func: c.String("f"),
+                    Args: c.String("args"),
+                    Timeout: int64(c.Int("t")),
+                }
+                if len(job.Name) == 0 || len(job.Func) == 0 {
+                    cli.ShowCommandHelp(c, "submit")
+                    log.Fatal("Job name and func is require")
+                }
+                delay := c.Int("sched_later")
+                var now = time.Now()
+                job.SchedAt = int64(now.Unix()) + int64(delay)
+                cmd.SubmitJob(c.GlobalString("H"), job)
             },
         },
     }
