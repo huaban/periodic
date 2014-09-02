@@ -60,7 +60,7 @@ func (r RedisStore) Save(job *sched.Job) (err error) {
         }
         if old.Name != job.Name {
             if _, e := conn.Do("ZERM", prefix + "name", old.Name); e != nil {
-                log.Printf("DelIndex Error: %s %s\n", prefix + "name", old.Name)
+                log.Printf("Error: ZREM %s %s failed\n", prefix + "name", old.Name)
             }
         }
     } else {
@@ -82,11 +82,11 @@ func (r RedisStore) Save(job *sched.Job) (err error) {
     }
     _, err = conn.Do("SET", key, data)
     if err == nil {
-        if _, e := conn.Do("ZADD", prefix + "name", job.Name, job.Id); e != nil {
-            log.Printf("DelIndex Error: %s %s\n",  prefix + "name", job.Name)
+        if _, e := conn.Do("ZADD", prefix + "name", job.Id, job.Name); e != nil {
+            log.Printf("Error: ZADD %s %d %s fail\n",  prefix + "name", job.Id, job.Name)
         }
-        if _, e := conn.Do("ZADD", REDIS_PREFIX + "ID", strconv.FormatInt(job.Id, 10), job.Id); e != nil {
-            log.Printf("DelIndex Error: %s %s\n",  prefix + "name", job.Name)
+        if _, e := conn.Do("ZADD", REDIS_PREFIX + "ID", job.Id, strconv.FormatInt(job.Id, 10)); e != nil {
+            log.Printf("Error: ZADD %s %d %d fail\n",  REDIS_PREFIX + "ID", job.Id, job.Id)
         }
     }
     return
