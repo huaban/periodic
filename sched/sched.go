@@ -20,6 +20,7 @@ type Sched struct {
     Funcs      map[string]*FuncStat
     store      Storer
     jobPQ      map[string]*PriorityQueue
+    PQLocker   *sync.Mutex
 }
 
 
@@ -49,6 +50,7 @@ func NewSched(entryPoint string, store Storer) *Sched {
     sched.jobQueue = list.New()
     sched.entryPoint = entryPoint
     sched.JobLocker = new(sync.Mutex)
+    sched.PQLocker = new(sync.Mutex)
     sched.Funcs = make(map[string]*FuncStat)
     sched.store = store
     sched.jobPQ = make(map[string]*PriorityQueue)
@@ -196,6 +198,8 @@ func (sched *Sched) SubmitJob(worker *Worker, job Job) {
 
 
 func (sched *Sched) lessItem() (lessItem *Item) {
+    defer sched.PQLocker.Unlock()
+    sched.PQLocker.Lock()
     maybeItem := make(map[string]*Item)
     for Func, stat := range sched.Funcs {
         if stat.Worker == 0 {
@@ -396,6 +400,8 @@ func (sched *Sched) removeGrabQueue(worker *Worker) {
 
 
 func (sched *Sched) pushJobPQ(job Job) bool {
+    defer sched.PQLocker.Unlock()
+    sched.PQLocker.Lock()
     if job.Status == JOB_STATUS_READY {
         pq, ok := sched.jobPQ[job.Func]
         if !ok {
