@@ -144,12 +144,7 @@ func (sched *Sched) isDoJob(job Job) bool {
                 sched.DecrStatProc(newJob)
                 newJob.Status = JOB_STATUS_READY
                 sched.store.Save(newJob)
-                pq := sched.jobPQ[newJob.Func]
-                item := &Item{
-                    value: newJob.Id,
-                    priority: newJob.SchedAt,
-                }
-                heap.Push(pq, item)
+                sched.pushJobPQ(newJob)
             }
             sched.jobQueue.Remove(e)
             continue
@@ -301,12 +296,7 @@ func (sched *Sched) Fail(jobId int64) {
     sched.DecrStatProc(job)
     job.Status = JOB_STATUS_READY
     sched.store.Save(job)
-    pq := sched.jobPQ[job.Func]
-    item := &Item{
-        value: job.Id,
-        priority: job.SchedAt,
-    }
-    heap.Push(pq, item)
+    sched.pushJobPQ(job)
     return
 }
 
@@ -378,12 +368,7 @@ func (sched *Sched) SchedLater(jobId int64, delay int64) {
     var now = time.Now()
     job.SchedAt = int64(now.Unix()) + delay
     sched.store.Save(job)
-    pq := sched.jobPQ[job.Func]
-    item := &Item{
-        value: job.Id,
-        priority: job.SchedAt,
-    }
-    heap.Push(pq, item)
+    sched.pushJobPQ(job)
     return
 }
 
@@ -394,6 +379,26 @@ func (sched *Sched) removeGrabQueue(worker *Worker) {
             sched.grabQueue.Remove(e)
         }
     }
+}
+
+
+func (sched *Sched) pushJobPQ(job Job) bool {
+    if job.Status == JOB_STATUS_READY {
+        pq, ok := sched.jobPQ[job.Func]
+        if !ok {
+            pq1 := make(PriorityQueue, 0)
+            pq = &pq1
+            sched.jobPQ[job.Func] = pq
+            heap.Init(pq)
+        }
+        item := &Item{
+            value: job.Id,
+            priority: job.SchedAt,
+        }
+        heap.Push(pq, item)
+        return true
+    }
+    return false
 }
 
 
@@ -414,21 +419,7 @@ func (sched *Sched) checkJobQueue() {
             continue
         }
         sched.IncrStatJob(job)
-        if job.Status != JOB_STATUS_PROC {
-            pq, ok := sched.jobPQ[job.Func]
-            if !ok {
-                pq1 := make(PriorityQueue, 0)
-                pq = &pq1
-                sched.jobPQ[job.Func] = pq
-                heap.Init(pq)
-            }
-            item := &Item{
-                value: job.Id,
-                priority: job.SchedAt,
-            }
-            heap.Push(pq, item)
-            continue
-        }
+        sched.pushJobPQ(job)
         runAt := job.RunAt
         if runAt < job.SchedAt {
             runAt = job.SchedAt

@@ -3,7 +3,6 @@ package sched
 import (
     "log"
     "encoding/json"
-    "container/heap"
 )
 
 
@@ -78,6 +77,7 @@ func (client *Client) HandleSubmitJob(payload []byte) (err error) {
         job.Id = oldJob.Id
         if oldJob.Status == JOB_STATUS_PROC {
             sched.DecrStatProc(oldJob)
+            sched.pushJobPQ(job)
         }
         is_new = false
     }
@@ -87,21 +87,9 @@ func (client *Client) HandleSubmitJob(payload []byte) (err error) {
         return
     }
 
-    pq, ok := sched.jobPQ[job.Func]
-    if !ok {
-        pq1 := make(PriorityQueue, 0)
-        pq = &pq1
-        sched.jobPQ[job.Func] = pq
-        heap.Init(pq)
-    }
-    item := &Item{
-        value: job.Id,
-        priority: job.SchedAt,
-    }
-    heap.Push(pq, item)
-
     if is_new {
         sched.IncrStatJob(job)
+        sched.pushJobPQ(job)
     }
     sched.Notify()
     err = conn.Send([]byte("ok"))
