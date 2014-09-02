@@ -266,6 +266,7 @@ func (sched *Sched) handle() {
         schedJob, err := sched.store.Get(lessItem.value)
 
         if err != nil {
+            log.Printf("Error: job[%d] not exists.", lessItem.value)
             continue
         }
 
