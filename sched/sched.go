@@ -211,9 +211,8 @@ func (sched *Sched) handle() {
         }
 
         maybeItem := make(map[string]*Item)
-        for Func, _ := range sched.Funcs {
-            pq, ok := sched.pq[Func]
-            if !ok || pq.Len() == 0 {
+        for Func, pq := range sched.pq {
+            if pq.Len() == 0 {
                 continue
             }
 
