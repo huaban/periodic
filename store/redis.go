@@ -46,7 +46,7 @@ func (r RedisStore) get(jobId int64) (job sched.Job, err error) {
 }
 
 
-func (r RedisStore) Save(job sched.Job) (err error) {
+func (r RedisStore) Save(job *sched.Job) (err error) {
     var key string
     var prefix = REDIS_PREFIX + job.Func + ":"
     var conn = r.pool.Get()

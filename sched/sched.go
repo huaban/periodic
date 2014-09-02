@@ -145,7 +145,7 @@ func (sched *Sched) isDoJob(job Job) bool {
             if newJob.Status == JOB_STATUS_PROC {
                 sched.DecrStatProc(newJob)
                 newJob.Status = JOB_STATUS_READY
-                sched.store.Save(newJob)
+                sched.store.Save(&newJob)
                 sched.pushJobPQ(newJob)
             }
             sched.jobQueue.Remove(e)
@@ -190,7 +190,7 @@ func (sched *Sched) SubmitJob(worker *Worker, job Job) {
     current := int64(now.Unix())
     job.Status = JOB_STATUS_PROC
     job.RunAt = current
-    sched.store.Save(job)
+    sched.store.Save(&job)
     sched.IncrStatProc(job)
     sched.jobQueue.PushBack(job)
     sched.removeGrabQueue(worker)
@@ -313,7 +313,7 @@ func (sched *Sched) Fail(jobId int64) {
     job, _ := sched.store.Get(jobId)
     sched.DecrStatProc(job)
     job.Status = JOB_STATUS_READY
-    sched.store.Save(job)
+    sched.store.Save(&job)
     sched.pushJobPQ(job)
     return
 }
@@ -385,7 +385,7 @@ func (sched *Sched) SchedLater(jobId int64, delay int64) {
     job.Status = JOB_STATUS_READY
     var now = time.Now()
     job.SchedAt = int64(now.Unix()) + delay
-    sched.store.Save(job)
+    sched.store.Save(&job)
     sched.pushJobPQ(job)
     return
 }
@@ -456,7 +456,7 @@ func (sched *Sched) checkJobQueue() {
 
     for _, job := range updateQueue {
         job.Status = JOB_STATUS_READY
-        sched.store.Save(job)
+        sched.store.Save(&job)
     }
 
     for _, job := range removeQueue {

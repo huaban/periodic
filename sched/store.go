@@ -20,7 +20,7 @@ const (
 
 
 type Storer interface {
-    Save(Job) error
+    Save(*Job) error
     Delete(jobId int64) error
     Get(jobId int64) (Job, error)
     GetOne(string, string) (Job, error)

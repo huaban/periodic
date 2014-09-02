@@ -81,7 +81,7 @@ func (client *Client) HandleSubmitJob(payload []byte) (err error) {
         }
         is_new = false
     }
-    e = sched.store.Save(job)
+    e = sched.store.Save(&job)
     if e != nil {
         err = conn.Send([]byte(e.Error()))
         return
