@@ -26,8 +26,17 @@ func main() {
         cli.StringFlag{
             Name: "redis",
             Value: "tcp://127.0.0.1:6379",
-            Usage: "the redis server address",
-            EnvVar: "REDIS_PORT",
+            Usage: "The redis server address, required driver redis",
+        },
+        cli.StringFlag{
+            Name: "driver",
+            Value: "leveldb",
+            Usage: "The store driver [leveldb, redis]",
+        },
+        cli.StringFlag{
+            Name: "dbpath",
+            Value: "leveldb",
+            Usage: "The db path, required driver leveldb",
         },
         cli.BoolFlag{
             Name: "d",
@@ -92,7 +101,14 @@ func main() {
     }
     app.Action = func(c *cli.Context) {
         if c.Bool("d") {
-            sched := sch.NewSched(c.String("H"), store.NewRedisStore(c.String("redis")))
+            var st sch.Storer
+            if c.String("driver") == "redis" {
+                st = store.NewRedisStore(c.String("redis"))
+            } else {
+                st = store.NewLevelDBStore(c.String("dbpath"))
+            }
+
+            sched := sch.NewSched(c.String("H"), st)
             sched.Serve()
         } else {
             cli.ShowAppHelp(c)
