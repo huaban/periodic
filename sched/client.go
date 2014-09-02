@@ -62,7 +62,6 @@ func (client *Client) HandleSubmitJob(payload []byte) (err error) {
     var e error
     var conn = client.conn
     var sched = client.sched
-    defer sched.Notify()
     defer sched.JobLocker.Unlock()
     sched.JobLocker.Lock()
     e = json.Unmarshal(payload, &job)
@@ -71,13 +70,14 @@ func (client *Client) HandleSubmitJob(payload []byte) (err error) {
         return
     }
     is_new := true
+    changed := false
     job.Status = JOB_STATUS_READY
     oldJob, e := sched.store.GetOne(job.Func, job.Name)
     if e == nil && oldJob.Id > 0 {
         job.Id = oldJob.Id
         if oldJob.Status == JOB_STATUS_PROC {
             sched.DecrStatProc(oldJob)
-            sched.pushJobPQ(job)
+            changed = true
         }
         is_new = false
     }
@@ -89,6 +89,8 @@ func (client *Client) HandleSubmitJob(payload []byte) (err error) {
 
     if is_new {
         sched.IncrStatJob(job)
+    }
+    if is_new || changed {
         sched.pushJobPQ(job)
     }
     sched.Notify()
