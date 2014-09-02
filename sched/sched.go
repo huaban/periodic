@@ -195,6 +195,52 @@ func (sched *Sched) SubmitJob(worker *Worker, job Job) {
 }
 
 
+func (sched *Sched) lessItem() (lessItem *Item) {
+    maybeItem := make(map[string]*Item)
+    for Func, stat := range sched.Funcs {
+        if stat.Worker == 0 {
+            continue
+        }
+        pq, ok := sched.jobPQ[Func]
+        if !ok || pq.Len() == 0 {
+            continue
+        }
+
+        item := heap.Pop(pq).(*Item)
+
+        maybeItem[Func] = item
+
+    }
+
+    if len(maybeItem) == 0 {
+        return nil
+    }
+
+    var lessFunc string
+
+    for Func, item := range maybeItem {
+        if lessItem == nil {
+            lessItem = item
+            lessFunc = Func
+            continue
+        }
+        if lessItem.priority > item.priority {
+            lessItem = item
+            lessFunc = Func
+        }
+    }
+
+    for Func, item := range maybeItem {
+        if Func == lessFunc {
+            continue
+        }
+        pq := sched.jobPQ[Func]
+        heap.Push(pq, item)
+    }
+    return
+}
+
+
 func (sched *Sched) handle() {
     var current time.Time
     var timestamp int64
@@ -205,45 +251,12 @@ func (sched *Sched) handle() {
             continue
         }
 
-        maybeItem := make(map[string]*Item)
-        for Func, pq := range sched.jobPQ {
-            if pq.Len() == 0 {
-                continue
-            }
+        lessItem := sched.lessItem()
 
-            item := heap.Pop(pq).(*Item)
-
-            maybeItem[Func] = item
-
-        }
-
-        if len(maybeItem) == 0 {
+        if lessItem == nil {
             sched.timer.Reset(time.Minute)
             current =<-sched.timer.C
             continue
-        }
-
-        var lessItem *Item
-        var lessFunc string
-
-        for Func, item := range maybeItem {
-            if lessItem == nil {
-                lessItem = item
-                lessFunc = Func
-                continue
-            }
-            if lessItem.priority > item.priority {
-                lessItem = item
-                lessFunc = Func
-            }
-        }
-
-        for Func, item := range maybeItem {
-            if Func == lessFunc {
-                continue
-            }
-            pq := sched.jobPQ[Func]
-            heap.Push(pq, item)
         }
 
         schedJob, err := sched.store.Get(lessItem.value)
