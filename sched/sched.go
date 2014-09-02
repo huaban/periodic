@@ -252,7 +252,6 @@ func (sched *Sched) handle() {
             continue
         }
 
-        pq := sched.jobPQ[schedJob.Func]
         timestamp = int64(time.Now().Unix())
 
         if schedJob.SchedAt > timestamp {
@@ -260,7 +259,7 @@ func (sched *Sched) handle() {
             current =<-sched.timer.C
             timestamp = int64(current.Unix())
             if schedJob.SchedAt > timestamp {
-                heap.Push(pq, lessItem)
+                sched.pushJobPQ(schedJob)
                 continue
             }
         }
@@ -282,6 +281,7 @@ func (sched *Sched) handle() {
 
         if !isSubmited {
             sched.DecrStatFunc(schedJob.Func)
+            sched.pushJobPQ(schedJob)
         }
     }
 }
