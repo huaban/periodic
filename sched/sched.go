@@ -12,14 +12,14 @@ import (
 
 
 type Sched struct {
-    timer            *time.Timer
-    grabQueue        *list.List
-    jobQueue         *list.List
-    entryPoint       string
-    JobLocker        *sync.Mutex
-    Funcs            map[string]*FuncStat
-    store            Storer
-    pq               map[string]*PriorityQueue
+    timer      *time.Timer
+    grabQueue  *list.List
+    jobQueue   *list.List
+    entryPoint string
+    JobLocker  *sync.Mutex
+    Funcs      map[string]*FuncStat
+    store      Storer
+    jobPQ      map[string]*PriorityQueue
 }
 
 
@@ -51,7 +51,7 @@ func NewSched(entryPoint string, store Storer) *Sched {
     sched.JobLocker = new(sync.Mutex)
     sched.Funcs = make(map[string]*FuncStat)
     sched.store = store
-    sched.pq = make(map[string]*PriorityQueue)
+    sched.jobPQ = make(map[string]*PriorityQueue)
     return sched
 }
 
@@ -144,7 +144,7 @@ func (sched *Sched) isDoJob(job Job) bool {
                 sched.DecrStatProc(newJob)
                 newJob.Status = JOB_STATUS_READY
                 sched.store.Save(newJob)
-                pq := sched.pq[newJob.Func]
+                pq := sched.jobPQ[newJob.Func]
                 item := &Item{
                     value: newJob.Id,
                     priority: newJob.SchedAt,
@@ -211,7 +211,7 @@ func (sched *Sched) handle() {
         }
 
         maybeItem := make(map[string]*Item)
-        for Func, pq := range sched.pq {
+        for Func, pq := range sched.jobPQ {
             if pq.Len() == 0 {
                 continue
             }
@@ -247,7 +247,7 @@ func (sched *Sched) handle() {
             if Func == lessFunc {
                 continue
             }
-            pq := sched.pq[Func]
+            pq := sched.jobPQ[Func]
             heap.Push(pq, item)
         }
 
@@ -257,7 +257,7 @@ func (sched *Sched) handle() {
             continue
         }
 
-        pq := sched.pq[schedJob.Func]
+        pq := sched.jobPQ[schedJob.Func]
         timestamp = int64(time.Now().Unix())
 
         if schedJob.SchedAt > timestamp {
@@ -301,7 +301,7 @@ func (sched *Sched) Fail(jobId int64) {
     sched.DecrStatProc(job)
     job.Status = JOB_STATUS_READY
     sched.store.Save(job)
-    pq := sched.pq[job.Func]
+    pq := sched.jobPQ[job.Func]
     item := &Item{
         value: job.Id,
         priority: job.SchedAt,
@@ -378,7 +378,7 @@ func (sched *Sched) SchedLater(jobId int64, delay int64) {
     var now = time.Now()
     job.SchedAt = int64(now.Unix()) + delay
     sched.store.Save(job)
-    pq := sched.pq[job.Func]
+    pq := sched.jobPQ[job.Func]
     item := &Item{
         value: job.Id,
         priority: job.SchedAt,
@@ -415,11 +415,11 @@ func (sched *Sched) checkJobQueue() {
         }
         sched.IncrStatJob(job)
         if job.Status != JOB_STATUS_PROC {
-            pq, ok := sched.pq[job.Func]
+            pq, ok := sched.jobPQ[job.Func]
             if !ok {
                 pq1 := make(PriorityQueue, 0)
                 pq = &pq1
-                sched.pq[job.Func] = pq
+                sched.jobPQ[job.Func] = pq
                 heap.Init(pq)
             }
             item := &Item{

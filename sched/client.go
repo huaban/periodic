@@ -87,11 +87,11 @@ func (client *Client) HandleSubmitJob(payload []byte) (err error) {
         return
     }
 
-    pq, ok := sched.pq[job.Func]
+    pq, ok := sched.jobPQ[job.Func]
     if !ok {
         pq1 := make(PriorityQueue, 0)
         pq = &pq1
-        sched.pq[job.Func] = pq
+        sched.jobPQ[job.Func] = pq
         heap.Init(pq)
     }
     item := &Item{
@@ -140,7 +140,7 @@ func (client *Client) HandleDropFunc(payload []byte) (err error) {
             sched.store.Delete(jobId)
         }
         delete(client.sched.Funcs, Func)
-        delete(client.sched.pq, Func)
+        delete(client.sched.jobPQ, Func)
     }
     err = client.conn.Send([]byte("ok"))
     return
