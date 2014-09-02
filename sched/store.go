@@ -25,6 +25,7 @@ type Storer interface {
     Get(jobId int64) (Job, error)
     GetOne(string, string) (Job, error)
     NewIterator([]byte) JobIterator
+    Close() error
 }
 
 

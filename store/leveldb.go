@@ -2,6 +2,7 @@ package store
 
 
 import (
+    "os"
     "fmt"
     "log"
     "errors"
@@ -25,7 +26,16 @@ type LevelDBStore struct {
 
 
 func NewLevelDBStore(dbpath string) sched.Storer {
-    db, err := leveldb.OpenFile(dbpath, nil)
+    var db *leveldb.DB
+    var err error
+
+    _, err = os.Stat(dbpath)
+
+    if err == nil || os.IsExist(err) {
+        db, err = leveldb.RecoverFile(dbpath, nil)
+    } else {
+        db, err = leveldb.OpenFile(dbpath, nil)
+    }
     if err != nil {
         log.Fatal(err)
     }
@@ -124,6 +134,12 @@ func (l LevelDBStore) NewIterator(Func []byte) sched.JobIterator {
         l: l,
         iter: iter,
     }
+}
+
+
+func (l LevelDBStore) Close() error {
+    err := l.db.Close()
+    return err
 }
 
 

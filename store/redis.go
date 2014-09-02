@@ -141,6 +141,11 @@ func (r RedisStore) NewIterator(Func []byte) sched.JobIterator {
 }
 
 
+func (r RedisStore) Close() error {
+    return nil
+}
+
+
 type RedisIterator struct {
     Func   []byte
     cursor int

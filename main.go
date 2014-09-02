@@ -4,6 +4,7 @@ import (
     "os"
     "log"
     "time"
+    "os/signal"
     "huabot-sched/store"
     sch "huabot-sched/sched"
     "huabot-sched/cmd"
@@ -109,7 +110,16 @@ func main() {
             }
 
             sched := sch.NewSched(c.String("H"), st)
-            sched.Serve()
+            go sched.Serve()
+            s := make(chan os.Signal, 1)
+            signal.Notify(s, os.Interrupt, os.Kill)
+            <-s
+            if c.String("driver") == "leveldb" {
+                err := st.Close()
+                if err != nil {
+                    log.Fatal(err)
+                }
+            }
         } else {
             cli.ShowAppHelp(c)
         }
