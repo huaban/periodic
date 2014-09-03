@@ -1,6 +1,7 @@
 package sched
 
 import (
+    "io"
     "log"
     "container/list"
     "strconv"
@@ -126,7 +127,9 @@ func (worker *Worker) Handle() {
     for {
         payload, err = conn.Receive()
         if err != nil {
-            log.Printf("Error: %s\n", err.Error())
+            if err != io.EOF {
+                log.Printf("WorkerError: %s\n", err.Error())
+            }
             worker.sched.DieWorker(worker)
             return
         }
@@ -171,7 +174,9 @@ func (worker *Worker) Handle() {
             break
         }
         if err != nil {
-            log.Printf("Error: %s\n", err.Error())
+            if err != io.EOF {
+                log.Printf("WorkerError: %s\n", err.Error())
+            }
             worker.alive = false
             worker.sched.DieWorker(worker)
             return

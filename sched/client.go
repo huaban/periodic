@@ -1,6 +1,7 @@
 package sched
 
 import (
+    "io"
     "log"
     "encoding/json"
 )
@@ -28,7 +29,9 @@ func (client *Client) Handle() {
     for {
         payload, err = conn.Receive()
         if err != nil {
-            log.Printf("Error: %s\n", err.Error())
+            if err != io.EOF {
+                log.Printf("WorkerError: %s\n", err.Error())
+            }
             return
         }
 
@@ -50,7 +53,9 @@ func (client *Client) Handle() {
             break
         }
         if err != nil {
-            log.Printf("Error: %s\n", err.Error())
+            if err != io.EOF {
+                log.Printf("WorkerError: %s\n", err.Error())
+            }
             return
         }
     }
