@@ -124,14 +124,19 @@ func (worker *Worker) Handle() {
     var payload []byte
     var err error
     var conn = worker.conn
+    defer func() {
+        if x := recover(); x != nil {
+            log.Printf("[Worker] painc: %v\n", x)
+        }
+    } ()
+    defer worker.Close()
     for {
         payload, err = conn.Receive()
         if err != nil {
             if err != io.EOF {
                 log.Printf("WorkerError: %s\n", err.Error())
             }
-            worker.sched.DieWorker(worker)
-            return
+            break
         }
 
 
@@ -177,9 +182,7 @@ func (worker *Worker) Handle() {
             if err != io.EOF {
                 log.Printf("WorkerError: %s\n", err.Error())
             }
-            worker.alive = false
-            worker.sched.DieWorker(worker)
-            return
+            break
         }
 
         if !worker.alive {
@@ -190,7 +193,10 @@ func (worker *Worker) Handle() {
 
 
 func (worker *Worker) Close() {
-    worker.conn.Close()
+    defer worker.sched.Notify()
+    defer worker.conn.Close()
+    worker.sched.removeGrabQueue(worker)
+    worker.alive = false
     for e := worker.jobQueue.Front(); e != nil; e = e.Next() {
         worker.sched.Fail(e.Value.(Job).Id)
     }

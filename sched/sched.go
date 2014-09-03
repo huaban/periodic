@@ -86,12 +86,6 @@ func (sched *Sched) Notify() {
 }
 
 
-func (sched *Sched) DieWorker(worker *Worker) {
-    defer sched.Notify()
-    sched.removeGrabQueue(worker)
-    worker.Close()
-}
-
 func (sched *Sched) HandleConnection(conn net.Conn) {
     c := Conn{Conn: conn}
     payload, err := c.Receive()
@@ -183,7 +177,6 @@ func (sched *Sched) SubmitJob(worker *Worker, job Job) {
     }
     if err := worker.HandleDo(job); err != nil {
         worker.alive = false
-        go sched.DieWorker(worker)
         return
     }
     now := time.Now()
