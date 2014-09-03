@@ -99,6 +99,25 @@ func main() {
                 cmd.SubmitJob(c.GlobalString("H"), job)
             },
         },
+        {
+            Name: "drop",
+            Usage: "Drop func",
+            Flags: []cli.Flag {
+                cli.StringFlag{
+                    Name: "f",
+                    Value: "",
+                    Usage: "function name",
+                },
+            },
+            Action: func(c *cli.Context) {
+                Func := c.String("f")
+                if len(Func) == 0 {
+                    cli.ShowCommandHelp(c, "drop")
+                    log.Fatal("function name is required")
+                }
+                cmd.DropFunc(c.GlobalString("H"), Func)
+            },
+        },
     }
     app.Action = func(c *cli.Context) {
         if c.Bool("d") {
