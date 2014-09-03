@@ -5,7 +5,7 @@ import (
     "log"
     "time"
     "os/signal"
-    "huabot-sched/store"
+    "huabot-sched/drivers"
     sch "huabot-sched/sched"
     "huabot-sched/cmd"
     "github.com/codegangsta/cli"
@@ -32,7 +32,7 @@ func main() {
         cli.StringFlag{
             Name: "driver",
             Value: "leveldb",
-            Usage: "The store driver [leveldb, redis]",
+            Usage: "The driver driver [leveldb, redis]",
         },
         cli.StringFlag{
             Name: "dbpath",
@@ -102,11 +102,11 @@ func main() {
     }
     app.Action = func(c *cli.Context) {
         if c.Bool("d") {
-            var st sch.Storer
+            var st sch.StoreDriver
             if c.String("driver") == "redis" {
-                st = store.NewRedisStore(c.String("redis"))
+                st = drivers.NewRedisDriver(c.String("redis"))
             } else {
-                st = store.NewLevelDBStore(c.String("dbpath"))
+                st = drivers.NewLevelDBDriver(c.String("dbpath"))
             }
 
             sched := sch.NewSched(c.String("H"), st)

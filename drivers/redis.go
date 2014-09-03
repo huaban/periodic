@@ -1,4 +1,4 @@
-package store
+package drivers
 
 
 import (
@@ -16,23 +16,23 @@ import (
 const REDIS_PREFIX = "huabot-sched:job:"
 
 
-type RedisStore struct {
+type RedisDriver struct {
     pool *redis.Pool
 }
 
 
-func NewRedisStore(server string) RedisStore {
+func NewRedisDriver(server string) RedisDriver {
     parts := strings.SplitN(server, "://", 2)
     pool := redis.NewPool(func() (conn redis.Conn, err error) {
         conn, err = redis.Dial("tcp", parts[1])
         return
     }, 3)
 
-    return RedisStore{pool: pool,}
+    return RedisDriver{pool: pool,}
 }
 
 
-func (r RedisStore) get(jobId int64) (job sched.Job, err error) {
+func (r RedisDriver) get(jobId int64) (job sched.Job, err error) {
     var data []byte
     var conn = r.pool.Get()
     defer conn.Close()
@@ -46,7 +46,7 @@ func (r RedisStore) get(jobId int64) (job sched.Job, err error) {
 }
 
 
-func (r RedisStore) Save(job *sched.Job) (err error) {
+func (r RedisDriver) Save(job *sched.Job) (err error) {
     var key string
     var prefix = REDIS_PREFIX + job.Func + ":"
     var conn = r.pool.Get()
@@ -93,7 +93,7 @@ func (r RedisStore) Save(job *sched.Job) (err error) {
 }
 
 
-func (r RedisStore) Delete(jobId int64) (err error) {
+func (r RedisDriver) Delete(jobId int64) (err error) {
     var key = REDIS_PREFIX + strconv.FormatInt(jobId, 10)
     job, e := r.get(jobId)
     if e != nil {
@@ -111,13 +111,13 @@ func (r RedisStore) Delete(jobId int64) (err error) {
 }
 
 
-func (r RedisStore) Get(jobId int64) (job sched.Job, err error) {
+func (r RedisDriver) Get(jobId int64) (job sched.Job, err error) {
     job, err = r.get(jobId)
     return
 }
 
 
-func (r RedisStore) GetOne(Func string, jobName string) (job sched.Job, err error) {
+func (r RedisDriver) GetOne(Func string, jobName string) (job sched.Job, err error) {
     var conn = r.pool.Get()
     defer conn.Close()
     jobId, _ := redis.Int64(conn.Do("ZSCORE", REDIS_PREFIX + Func + ":name", jobName))
@@ -128,7 +128,7 @@ func (r RedisStore) GetOne(Func string, jobName string) (job sched.Job, err erro
 }
 
 
-func (r RedisStore) NewIterator(Func []byte) sched.JobIterator {
+func (r RedisDriver) NewIterator(Func []byte) sched.JobIterator {
     return &RedisIterator{
         Func: Func,
         cursor: 0,
@@ -141,7 +141,7 @@ func (r RedisStore) NewIterator(Func []byte) sched.JobIterator {
 }
 
 
-func (r RedisStore) Close() error {
+func (r RedisDriver) Close() error {
     return nil
 }
 
@@ -153,7 +153,7 @@ type RedisIterator struct {
     cacheJob []sched.Job
     start  int
     limit  int
-    r      RedisStore
+    r      RedisDriver
 }
 
 func (iter *RedisIterator) Next() bool {

@@ -72,7 +72,7 @@ func (client *Client) HandleSubmitJob(payload []byte) (err error) {
     is_new := true
     changed := false
     job.Status = JOB_STATUS_READY
-    oldJob, e := sched.store.GetOne(job.Func, job.Name)
+    oldJob, e := sched.driver.GetOne(job.Func, job.Name)
     if e == nil && oldJob.Id > 0 {
         job.Id = oldJob.Id
         if oldJob.Status == JOB_STATUS_PROC {
@@ -81,7 +81,7 @@ func (client *Client) HandleSubmitJob(payload []byte) (err error) {
         }
         is_new = false
     }
-    e = sched.store.Save(&job)
+    e = sched.driver.Save(&job)
     if e != nil {
         err = conn.Send([]byte(e.Error()))
         return
@@ -116,7 +116,7 @@ func (client *Client) HandleDropFunc(payload []byte) (err error) {
     defer sched.JobLocker.Unlock()
     sched.JobLocker.Lock()
     if ok && stat.Worker == 0 {
-        iter := sched.store.NewIterator(payload)
+        iter := sched.driver.NewIterator(payload)
         deleteJob := make([]int64, 0)
         for {
             if !iter.Next() {
@@ -127,7 +127,7 @@ func (client *Client) HandleDropFunc(payload []byte) (err error) {
         }
         iter.Close()
         for _, jobId := range deleteJob {
-            sched.store.Delete(jobId)
+            sched.driver.Delete(jobId)
         }
         delete(client.sched.Funcs, Func)
         delete(client.sched.jobPQ, Func)

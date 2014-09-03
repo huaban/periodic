@@ -19,7 +19,7 @@ const (
 )
 
 
-type Storer interface {
+type StoreDriver interface {
     Save(*Job) error
     Delete(jobId int64) error
     Get(jobId int64) (Job, error)

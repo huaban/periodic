@@ -1,4 +1,4 @@
-package store
+package drivers
 
 
 import (
@@ -20,12 +20,12 @@ const PRE_JOB_FUNC = "func:"
 const PRE_SEQUENCE = "sequence:"
 
 
-type LevelDBStore struct {
+type LevelDBDriver struct {
     db *leveldb.DB
 }
 
 
-func NewLevelDBStore(dbpath string) sched.Storer {
+func NewLevelDBDriver(dbpath string) LevelDBDriver {
     var db *leveldb.DB
     var err error
 
@@ -39,13 +39,13 @@ func NewLevelDBStore(dbpath string) sched.Storer {
     if err != nil {
         log.Fatal(err)
     }
-    return LevelDBStore{
+    return LevelDBDriver{
         db: db,
     }
 }
 
 
-func (l LevelDBStore) Save(job *sched.Job) (err error) {
+func (l LevelDBDriver) Save(job *sched.Job) (err error) {
     batch := new(leveldb.Batch)
     if job.Id > 0 {
         old, e := l.Get(job.Id)
@@ -79,7 +79,7 @@ func (l LevelDBStore) Save(job *sched.Job) (err error) {
 }
 
 
-func (l LevelDBStore) Delete(jobId int64) (err error) {
+func (l LevelDBDriver) Delete(jobId int64) (err error) {
     var job sched.Job
     batch := new(leveldb.Batch)
     job, err = l.Get(jobId)
@@ -93,7 +93,7 @@ func (l LevelDBStore) Delete(jobId int64) (err error) {
 }
 
 
-func (l LevelDBStore) Get(jobId int64) (job sched.Job, err error) {
+func (l LevelDBDriver) Get(jobId int64) (job sched.Job, err error) {
     var data []byte
     var key = PRE_JOB + strconv.FormatInt(jobId, 10)
     data, err = l.db.Get([]byte(key), nil)
@@ -105,7 +105,7 @@ func (l LevelDBStore) Get(jobId int64) (job sched.Job, err error) {
 }
 
 
-func (l LevelDBStore) GetOne(Func, name string) (job sched.Job, err error) {
+func (l LevelDBDriver) GetOne(Func, name string) (job sched.Job, err error) {
     var data []byte
     var key = PRE_JOB_FUNC + Func + ":" + name
     data, err = l.db.Get([]byte(key), nil)
@@ -122,7 +122,7 @@ func (l LevelDBStore) GetOne(Func, name string) (job sched.Job, err error) {
 }
 
 
-func (l LevelDBStore) NewIterator(Func []byte) sched.JobIterator {
+func (l LevelDBDriver) NewIterator(Func []byte) sched.JobIterator {
     var prefix []byte
     if Func == nil {
         prefix = []byte(PRE_JOB)
@@ -138,14 +138,14 @@ func (l LevelDBStore) NewIterator(Func []byte) sched.JobIterator {
 }
 
 
-func (l LevelDBStore) Close() error {
+func (l LevelDBDriver) Close() error {
     err := l.db.Close()
     return err
 }
 
 
 type LevelDBIterator struct {
-    l LevelDBStore
+    l LevelDBDriver
     iter iterator.Iterator
     Func []byte
 }

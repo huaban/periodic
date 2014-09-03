@@ -18,7 +18,7 @@ type Sched struct {
     entryPoint string
     JobLocker  *sync.Mutex
     Funcs      map[string]*FuncStat
-    store      Storer
+    driver      StoreDriver
     jobPQ      map[string]*PriorityQueue
     PQLocker   *sync.Mutex
 }
@@ -43,7 +43,7 @@ type FuncStat struct {
 }
 
 
-func NewSched(entryPoint string, store Storer) *Sched {
+func NewSched(entryPoint string, driver StoreDriver) *Sched {
     sched := new(Sched)
     sched.timer = time.NewTimer(1 * time.Hour)
     sched.grabQueue = list.New()
@@ -52,7 +52,7 @@ func NewSched(entryPoint string, store Storer) *Sched {
     sched.JobLocker = new(sync.Mutex)
     sched.PQLocker = new(sync.Mutex)
     sched.Funcs = make(map[string]*FuncStat)
-    sched.store = store
+    sched.driver = driver
     sched.jobPQ = make(map[string]*PriorityQueue)
     return sched
 }
@@ -120,9 +120,9 @@ func (sched *Sched) Done(jobId int64) {
     defer sched.JobLocker.Unlock()
     sched.JobLocker.Lock()
     removeListJob(sched.jobQueue, jobId)
-    job, err := sched.store.Get(jobId)
+    job, err := sched.driver.Get(jobId)
     if err == nil {
-        sched.store.Delete(jobId)
+        sched.driver.Delete(jobId)
         sched.DecrStatJob(job)
         sched.DecrStatProc(job)
     }
@@ -141,11 +141,11 @@ func (sched *Sched) isDoJob(job Job) bool {
             runAt = chk.SchedAt
         }
         if chk.Timeout > 0 && runAt + chk.Timeout < current {
-            newJob, _ := sched.store.Get(chk.Id)
+            newJob, _ := sched.driver.Get(chk.Id)
             if newJob.Status == JOB_STATUS_PROC {
                 sched.DecrStatProc(newJob)
                 newJob.Status = JOB_STATUS_READY
-                sched.store.Save(&newJob)
+                sched.driver.Save(&newJob)
                 sched.pushJobPQ(newJob)
             }
             sched.jobQueue.Remove(e)
@@ -172,7 +172,7 @@ func (sched *Sched) SubmitJob(worker *Worker, job Job) {
     defer sched.JobLocker.Unlock()
     sched.JobLocker.Lock()
     if job.Name == "" {
-        sched.store.Delete(job.Id)
+        sched.driver.Delete(job.Id)
         return
     }
     if sched.isDoJob(job) {
@@ -190,7 +190,7 @@ func (sched *Sched) SubmitJob(worker *Worker, job Job) {
     current := int64(now.Unix())
     job.Status = JOB_STATUS_PROC
     job.RunAt = current
-    sched.store.Save(&job)
+    sched.driver.Save(&job)
     sched.IncrStatProc(job)
     sched.jobQueue.PushBack(job)
     sched.removeGrabQueue(worker)
@@ -263,7 +263,7 @@ func (sched *Sched) handle() {
             continue
         }
 
-        schedJob, err := sched.store.Get(lessItem.value)
+        schedJob, err := sched.driver.Get(lessItem.value)
 
         if err != nil {
             log.Printf("Error: job[%d] not exists.", lessItem.value)
@@ -310,10 +310,10 @@ func (sched *Sched) Fail(jobId int64) {
     defer sched.JobLocker.Unlock()
     sched.JobLocker.Lock()
     removeListJob(sched.jobQueue, jobId)
-    job, _ := sched.store.Get(jobId)
+    job, _ := sched.driver.Get(jobId)
     sched.DecrStatProc(job)
     job.Status = JOB_STATUS_READY
-    sched.store.Save(&job)
+    sched.driver.Save(&job)
     sched.pushJobPQ(job)
     return
 }
@@ -380,12 +380,12 @@ func (sched *Sched) SchedLater(jobId int64, delay int64) {
     defer sched.JobLocker.Unlock()
     sched.JobLocker.Lock()
     removeListJob(sched.jobQueue, jobId)
-    job, _ := sched.store.Get(jobId)
+    job, _ := sched.driver.Get(jobId)
     sched.DecrStatProc(job)
     job.Status = JOB_STATUS_READY
     var now = time.Now()
     job.SchedAt = int64(now.Unix()) + delay
-    sched.store.Save(&job)
+    sched.driver.Save(&job)
     sched.pushJobPQ(job)
     return
 }
@@ -428,7 +428,7 @@ func (sched *Sched) checkJobQueue() {
     var now = time.Now()
     current := int64(now.Unix())
 
-    iter := sched.store.NewIterator(nil)
+    iter := sched.driver.NewIterator(nil)
     for {
         if !iter.Next() {
             break
@@ -456,11 +456,11 @@ func (sched *Sched) checkJobQueue() {
 
     for _, job := range updateQueue {
         job.Status = JOB_STATUS_READY
-        sched.store.Save(&job)
+        sched.driver.Save(&job)
     }
 
     for _, job := range removeQueue {
-        sched.store.Delete(job.Id)
+        sched.driver.Delete(job.Id)
     }
 }
 
