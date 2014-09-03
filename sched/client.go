@@ -25,12 +25,17 @@ func (client *Client) Handle() {
     var payload []byte
     var err error
     var conn = client.conn
+    defer func() {
+        if x := recover(); x != nil {
+            log.Printf("[Client] painc: %v\n", x)
+        }
+    } ()
     defer conn.Close()
     for {
         payload, err = conn.Receive()
         if err != nil {
             if err != io.EOF {
-                log.Printf("WorkerError: %s\n", err.Error())
+                log.Printf("ClientError: %s\n", err.Error())
             }
             return
         }
@@ -54,7 +59,7 @@ func (client *Client) Handle() {
         }
         if err != nil {
             if err != io.EOF {
-                log.Printf("WorkerError: %s\n", err.Error())
+                log.Printf("ClientError: %s\n", err.Error())
             }
             return
         }
