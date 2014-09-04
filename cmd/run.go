@@ -59,6 +59,7 @@ func Run(entryPoint, Func, cmd string) {
         c.Stderr = &stderr
         err = c.Run()
         var schedLater int
+        var fail = false
         for {
             line, err := out.ReadString([]byte("\n")[0])
             if err != nil {
@@ -68,13 +69,15 @@ func Run(entryPoint, Func, cmd string) {
                 parts = strings.SplitN(line[:len(line) - 1], " ", 2)
                 later := strings.Trim(parts[1], " ")
                 schedLater, _ = strconv.Atoi(later)
+            } else if strings.HasPrefix(line, "FAIL") {
+                fail = true
             } else {
                 fmt.Print(line)
             }
         }
         fmt.Print(stderr.String())
         buf := bytes.NewBuffer(nil)
-        if err != nil {
+        if err != nil || fail {
             buf.WriteByte(byte(sched.JOB_FAIL))
         } else if schedLater > 0 {
             buf.WriteByte(byte(sched.SCHED_LATER))
