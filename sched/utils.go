@@ -17,7 +17,7 @@ func sockCheck(sockFile string) {
         conn, err := net.Dial("unix", sockFile)
         if err == nil {
             conn.Close()
-            log.Fatal("Huabot-sched is already started.")
+            log.Fatal("Periodic task system is already started.")
         }
         os.Remove(sockFile)
     }
