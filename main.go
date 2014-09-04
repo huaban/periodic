@@ -118,6 +118,35 @@ func main() {
                 cmd.DropFunc(c.GlobalString("H"), Func)
             },
         },
+        {
+            Name: "run",
+            Usage: "Run func",
+            Flags: []cli.Flag {
+                cli.StringFlag{
+                    Name: "f",
+                    Value: "",
+                    Usage: "function name required",
+                },
+                cli.StringFlag{
+                    Name: "exec",
+                    Value: "",
+                    Usage: "command required",
+                },
+            },
+            Action: func(c *cli.Context) {
+                Func := c.String("f")
+                exec := c.String("exec")
+                if len(Func) == 0 {
+                    cli.ShowCommandHelp(c, "run")
+                    log.Fatal("function name is required")
+                }
+                if len(exec) == 0 {
+                    cli.ShowCommandHelp(c, "run")
+                    log.Fatal("command is required")
+                }
+                cmd.Run(c.GlobalString("H"), Func, exec)
+            },
+        },
     }
     app.Action = func(c *cli.Context) {
         if c.Bool("d") {
