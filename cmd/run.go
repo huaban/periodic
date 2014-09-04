@@ -54,7 +54,9 @@ func Run(entryPoint, Func, cmd string) {
         c := exec.Command(realCmd[0], realCmd[1:]...)
         c.Stdin = strings.NewReader(job.Args)
         var out bytes.Buffer
+        var stderr bytes.Buffer
         c.Stdout = &out
+        c.Stderr = &stderr
         err = c.Run()
         var schedLater int
         for {
@@ -70,6 +72,7 @@ func Run(entryPoint, Func, cmd string) {
                 fmt.Print(line)
             }
         }
+        fmt.Print(stderr.String())
         buf := bytes.NewBuffer(nil)
         if err != nil {
             buf.WriteByte(byte(sched.JOB_FAIL))
