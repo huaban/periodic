@@ -4,7 +4,7 @@ import (
     "net"
     "strings"
     "encoding/json"
-    "huabot-sched/sched"
+    "periodic/sched"
     "fmt"
     "log"
 )

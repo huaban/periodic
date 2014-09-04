@@ -4,7 +4,7 @@ package cmd
 import (
     "net"
     "strings"
-    "huabot-sched/sched"
+    "periodic/sched"
     "fmt"
     "log"
     "bytes"

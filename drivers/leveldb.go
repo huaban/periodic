@@ -8,7 +8,7 @@ import (
     "errors"
     "strconv"
     "encoding/json"
-    "huabot-sched/sched"
+    "periodic/sched"
     "github.com/syndtr/goleveldb/leveldb"
     "github.com/syndtr/goleveldb/leveldb/util"
     "github.com/syndtr/goleveldb/leveldb/iterator"

@@ -8,7 +8,7 @@ import (
     "strings"
     "strconv"
     "encoding/json"
-    "huabot-sched/sched"
+    "periodic/sched"
     "github.com/garyburd/redigo/redis"
 )
 

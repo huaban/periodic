@@ -5,24 +5,24 @@ import (
     "log"
     "time"
     "os/signal"
-    "huabot-sched/drivers"
-    sch "huabot-sched/sched"
-    "huabot-sched/cmd"
+    "periodic/drivers"
+    sch "periodic/sched"
+    "periodic/cmd"
     "github.com/codegangsta/cli"
 )
 
 
 func main() {
     app := cli.NewApp()
-    app.Name = "huabot-sched"
-    app.Usage = ""
+    app.Name = "periodic"
+    app.Usage = "Periodic task system"
     app.Version = "0.0.1"
     app.Flags = []cli.Flag {
         cli.StringFlag{
             Name: "H",
-            Value: "unix://huabot-sched.sock",
+            Value: "unix:///tmp/periodic.sock",
             Usage: "the server address eg: tcp://127.0.0.1:5000",
-            EnvVar: "HUABOT_SCHED_PORT",
+            EnvVar: "PERIODIC_PORT",
         },
         cli.StringFlag{
             Name: "redis",
