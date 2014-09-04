@@ -70,7 +70,7 @@ func (sched *Sched) Serve() {
         log.Fatal(err)
     }
     defer listen.Close()
-    log.Printf("huabot-sched started on %s\n", sched.entryPoint)
+    log.Printf("Periodic task system started on %s\n", sched.entryPoint)
     for {
         conn, err := listen.Accept()
         if err != nil {
