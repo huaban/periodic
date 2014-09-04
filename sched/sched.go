@@ -18,7 +18,8 @@ type Sched struct {
     entryPoint string
     JobLocker  *sync.Mutex
     Funcs      map[string]*FuncStat
-    driver      StoreDriver
+    FuncLocker *sync.Mutex
+    driver     StoreDriver
     jobPQ      map[string]*PriorityQueue
     PQLocker   *sync.Mutex
 }
@@ -51,6 +52,7 @@ func NewSched(entryPoint string, driver StoreDriver) *Sched {
     sched.entryPoint = entryPoint
     sched.JobLocker = new(sync.Mutex)
     sched.PQLocker = new(sync.Mutex)
+    sched.FuncLocker = new(sync.Mutex)
     sched.Funcs = make(map[string]*FuncStat)
     sched.driver = driver
     sched.jobPQ = make(map[string]*PriorityQueue)
@@ -312,48 +314,44 @@ func (sched *Sched) Fail(jobId int64) {
 }
 
 
-func (sched *Sched) IncrStatFunc(Func string) {
+func (sched *Sched) getFuncStat(Func string) *FuncStat {
+    defer sched.FuncLocker.Unlock()
+    sched.FuncLocker.Lock()
     stat, ok := sched.Funcs[Func]
     if !ok {
         stat = new(FuncStat)
         sched.Funcs[Func] = stat
     }
+    return stat
+}
+
+
+func (sched *Sched) IncrStatFunc(Func string) {
+    stat := sched.getFuncStat(Func)
     stat.Worker.Incr()
 }
 
 
 func (sched *Sched) DecrStatFunc(Func string) {
-    stat, ok := sched.Funcs[Func]
-    if ok {
-        stat.Worker.Decr()
-    }
+    stat := sched.getFuncStat(Func)
+    stat.Worker.Decr()
 }
 
 
 func (sched *Sched) IncrStatJob(job Job) {
-    stat, ok := sched.Funcs[job.Func]
-    if !ok {
-        stat = new(FuncStat)
-        sched.Funcs[job.Func] = stat
-    }
+    stat := sched.getFuncStat(job.Func)
     stat.Job.Incr()
 }
 
 
 func (sched *Sched) DecrStatJob(job Job) {
-    stat, ok := sched.Funcs[job.Func]
-    if ok {
-        stat.Job.Decr()
-    }
+    stat := sched.getFuncStat(job.Func)
+    stat.Job.Decr()
 }
 
 
 func (sched *Sched) IncrStatProc(job Job) {
-    stat, ok := sched.Funcs[job.Func]
-    if !ok {
-        stat = new(FuncStat)
-        sched.Funcs[job.Func] = stat
-    }
+    stat := sched.getFuncStat(job.Func)
     if job.Status == JOB_STATUS_PROC {
         stat.Processing.Incr()
     }
@@ -361,8 +359,8 @@ func (sched *Sched) IncrStatProc(job Job) {
 
 
 func (sched *Sched) DecrStatProc(job Job) {
-    stat, ok := sched.Funcs[job.Func]
-    if ok && job.Status == JOB_STATUS_PROC {
+    stat := sched.getFuncStat(job.Func)
+    if job.Status == JOB_STATUS_PROC {
         stat.Processing.Decr()
     }
 }
