@@ -293,7 +293,6 @@ func (sched *Sched) handle() {
         }
 
         if !isSubmited {
-            sched.DecrStatFunc(schedJob.Func)
             sched.pushJobPQ(schedJob)
         }
     }
