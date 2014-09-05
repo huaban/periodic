@@ -35,7 +35,6 @@ func (worker *Worker) IsAlive() bool {
 
 
 func (worker *Worker) HandleDo(job Job) (err error){
-    log.Printf("HandleDo: %d\n", job.Id)
     worker.jobQueue.PushBack(job)
     Pack, err := PackJob(job)
     if err != nil {
@@ -48,7 +47,6 @@ func (worker *Worker) HandleDo(job Job) (err error){
 
 
 func (worker *Worker) HandleCanDo(Func string) error {
-    log.Printf("HandleCanDo: %s\n", Func)
     for _, f := range worker.Funcs {
         if f == Func {
             return nil
@@ -61,7 +59,6 @@ func (worker *Worker) HandleCanDo(Func string) error {
 
 
 func (worker *Worker) HandleCanNoDo(Func string) error {
-    log.Printf("HandleCanDo: %s\n", Func)
     newFuncs := make([]string, 0)
     for _, f := range worker.Funcs {
         if f == Func {
@@ -75,7 +72,6 @@ func (worker *Worker) HandleCanNoDo(Func string) error {
 
 
 func (worker *Worker) HandleDone(jobId int64) (err error) {
-    log.Printf("HandleDone: %d\n", jobId)
     worker.sched.Done(jobId)
     removeListJob(worker.jobQueue, jobId)
     return nil
@@ -83,7 +79,6 @@ func (worker *Worker) HandleDone(jobId int64) (err error) {
 
 
 func (worker *Worker) HandleFail(jobId int64) (err error) {
-    log.Printf("HandleFail: %d\n", jobId)
     worker.sched.Fail(jobId)
     removeListJob(worker.jobQueue, jobId)
     return nil
@@ -91,14 +86,12 @@ func (worker *Worker) HandleFail(jobId int64) (err error) {
 
 
 func (worker *Worker) HandleWaitForJob() (err error) {
-    log.Printf("HandleWaitForJob\n")
     err = worker.conn.Send(WAIT_JOB.Bytes())
     return nil
 }
 
 
 func (worker *Worker) HandleSchedLater(jobId, delay int64) (err error){
-    log.Printf("HandleSchedLater: %d %d\n", jobId, delay)
     worker.sched.SchedLater(jobId, delay)
     removeListJob(worker.jobQueue, jobId)
     return nil
@@ -106,14 +99,12 @@ func (worker *Worker) HandleSchedLater(jobId, delay int64) (err error){
 
 
 func (worker *Worker) HandleNoJob() (err error){
-    log.Printf("HandleNoJob\n")
     err = worker.conn.Send(NO_JOB.Bytes())
     return
 }
 
 
 func (worker *Worker) HandleGrabJob() (err error){
-    log.Printf("HandleGrabJob\n")
     worker.sched.grabQueue.PushBack(worker)
     worker.sched.Notify()
     return nil
