@@ -44,10 +44,3 @@ func removeListJob(l *list.List, jobId int64) {
         }
     }
 }
-
-
-func PackCmd(i int) []byte {
-    buf := bytes.NewBuffer(nil)
-    buf.WriteByte(byte(i))
-    return buf.Bytes()
-}

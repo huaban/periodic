@@ -40,7 +40,7 @@ func (client *Client) Handle() {
             return
         }
 
-        switch payload[0] {
+        switch Command(payload[0]) {
         case SUBMIT_JOB:
             err = client.HandleSubmitJob(payload[2:])
             break
@@ -48,13 +48,13 @@ func (client *Client) Handle() {
             err = client.HandleStatus()
             break
         case PING:
-            err = conn.Send(PackCmd(PONG))
+            err = conn.Send(PONG.Bytes())
             break
         case DROP_FUNC:
             err = client.HandleDropFunc(payload[2:])
             break
         default:
-            err = conn.Send(PackCmd(UNKNOWN))
+            err = conn.Send(UNKNOWN.Bytes())
             break
         }
         if err != nil {

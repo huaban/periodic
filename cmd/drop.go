@@ -19,7 +19,7 @@ func DropFunc(entryPoint, Func string) {
     }
     conn := sched.Conn{Conn: c}
     defer conn.Close()
-    err = conn.Send(sched.PackCmd(sched.TYPE_CLIENT))
+    err = conn.Send(sched.TYPE_CLIENT.Bytes())
     if err != nil {
         log.Fatal(err)
     }

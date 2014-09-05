@@ -92,7 +92,7 @@ func (worker *Worker) HandleFail(jobId int64) (err error) {
 
 func (worker *Worker) HandleWaitForJob() (err error) {
     log.Printf("HandleWaitForJob\n")
-    err = worker.conn.Send(PackCmd(WAIT_JOB))
+    err = worker.conn.Send(WAIT_JOB.Bytes())
     return nil
 }
 
@@ -107,7 +107,7 @@ func (worker *Worker) HandleSchedLater(jobId, delay int64) (err error){
 
 func (worker *Worker) HandleNoJob() (err error){
     log.Printf("HandleNoJob\n")
-    err = worker.conn.Send(PackCmd(NO_JOB))
+    err = worker.conn.Send(NO_JOB.Bytes())
     return
 }
 
@@ -140,7 +140,7 @@ func (worker *Worker) Handle() {
         }
 
 
-        switch payload[0] {
+        switch Command(payload[0]) {
         case GRAB_JOB:
             err = worker.HandleGrabJob()
             break
@@ -163,10 +163,10 @@ func (worker *Worker) Handle() {
             err = worker.HandleSchedLater(jobId, delay)
             break
         case SLEEP:
-            err = conn.Send(PackCmd(NOOP))
+            err = conn.Send(NOOP.Bytes())
             break
         case PING:
-            err = conn.Send(PackCmd(PONG))
+            err = conn.Send(PONG.Bytes())
             break
         case CAN_DO:
             err = worker.HandleCanDo(string(payload[2:]))
@@ -175,7 +175,7 @@ func (worker *Worker) Handle() {
             err = worker.HandleCanNoDo(string(payload[2:]))
             break
         default:
-            err = conn.Send(PackCmd(UNKNOWN))
+            err = conn.Send(UNKNOWN.Bytes())
             break
         }
         if err != nil {

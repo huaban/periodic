@@ -24,7 +24,7 @@ func Run(entryPoint, Func, cmd string) {
     }
     conn := sched.Conn{Conn: c}
     defer conn.Close()
-    err = conn.Send(sched.PackCmd(sched.TYPE_WORKER))
+    err = conn.Send(sched.TYPE_WORKER.Bytes())
     if err != nil {
         log.Fatal(err)
     }
@@ -41,7 +41,7 @@ func Run(entryPoint, Func, cmd string) {
     var job sched.Job
     var jobHandle []byte
     for {
-        err = conn.Send(sched.PackCmd(sched.GRAB_JOB))
+        err = conn.Send(sched.GRAB_JOB.Bytes())
         if err != nil {
             log.Fatal(err)
         }

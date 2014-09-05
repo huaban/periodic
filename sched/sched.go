@@ -94,7 +94,7 @@ func (sched *Sched) HandleConnection(conn net.Conn) {
     if err != nil {
         return
     }
-    switch payload[0] {
+    switch ClientType(payload[0]) {
     case TYPE_CLIENT:
         client := NewClient(sched, c)
         go client.Handle()

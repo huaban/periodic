@@ -17,11 +17,11 @@ func ShowStatus(entryPoint string) {
     }
     conn := sched.Conn{Conn: c}
     defer conn.Close()
-    err = conn.Send(sched.PackCmd(sched.TYPE_CLIENT))
+    err = conn.Send(sched.TYPE_CLIENT.Bytes())
     if err != nil {
         log.Fatal(err)
     }
-    err = conn.Send(sched.PackCmd(sched.STATUS))
+    err = conn.Send(sched.STATUS.Bytes())
     if err != nil {
         log.Fatal(err)
     }
