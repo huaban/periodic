@@ -1,5 +1,8 @@
 package sched
 
+import (
+    "encoding/json"
+)
 
 type Job struct {
     Id      int64  `json:"job_id"`
@@ -10,6 +13,18 @@ type Job struct {
     SchedAt int64  `json:"sched_at"`
     RunAt   int64  `json:"run_at"`
     Status  string `json:"status"`
+}
+
+
+func NewJob(payload []byte) (job Job, err error) {
+    err = json.Unmarshal(payload, &job)
+    return
+}
+
+
+func (job Job) Bytes() (data []byte) {
+    data, _ = json.Marshal(job)
+    return
 }
 
 

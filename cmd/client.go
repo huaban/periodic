@@ -4,7 +4,6 @@ package cmd
 import (
     "net"
     "strings"
-    "encoding/json"
     "periodic/sched"
     "fmt"
     "log"
@@ -24,12 +23,10 @@ func SubmitJob(entryPoint string, job sched.Job) {
     if err != nil {
         log.Fatal(err)
     }
-    var data []byte
-    data, _ = json.Marshal(job)
     buf := bytes.NewBuffer(nil)
     buf.WriteByte(byte(sched.SUBMIT_JOB))
     buf.Write(sched.NULL_CHAR)
-    buf.Write(data)
+    buf.Write(job.Bytes())
     err = conn.Send(buf.Bytes())
     if err != nil {
         log.Fatal(err)

@@ -74,7 +74,7 @@ func (client *Client) HandleSubmitJob(payload []byte) (err error) {
     var sched = client.sched
     defer sched.JobLocker.Unlock()
     sched.JobLocker.Lock()
-    e = json.Unmarshal(payload, &job)
+    job, e = NewJob(payload)
     if e != nil {
         err = conn.Send([]byte(e.Error()))
         return

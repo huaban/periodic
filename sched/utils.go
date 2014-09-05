@@ -6,7 +6,6 @@ import (
     "log"
     "bytes"
     "strconv"
-    "encoding/json"
     "container/list"
 )
 
@@ -25,11 +24,7 @@ func sockCheck(sockFile string) {
 
 
 func PackJob(job Job) ([]byte, error) {
-    jobStr, err := json.Marshal(job)
-    if err != nil {
-        return nil, err
-    }
-    buf := bytes.NewBuffer(jobStr)
+    buf := bytes.NewBuffer(job.Bytes())
     buf.Write(NULL_CHAR)
     buf.WriteString(strconv.FormatInt(job.Id, 10))
     return buf.Bytes(), nil

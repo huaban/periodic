@@ -7,7 +7,6 @@ import (
     "errors"
     "strings"
     "strconv"
-    "encoding/json"
     "periodic/sched"
     "github.com/garyburd/redigo/redis"
 )
@@ -41,7 +40,7 @@ func (r RedisDriver) get(jobId int64) (job sched.Job, err error) {
     if err != nil {
         return
     }
-    err = json.Unmarshal(data, &job)
+    job, err = sched.NewJob(data)
     return
 }
 
@@ -75,12 +74,7 @@ func (r RedisDriver) Save(job *sched.Job) (err error) {
         return
     }
     key = REDIS_PREFIX + strconv.FormatInt(job.Id, 10)
-    var data []byte
-    data, err = json.Marshal(job)
-    if err != nil {
-        return
-    }
-    _, err = conn.Do("SET", key, data)
+    _, err = conn.Do("SET", key, job.Bytes())
     if err == nil {
         if _, e := conn.Do("ZADD", prefix + "name", job.Id, job.Name); e != nil {
             log.Printf("Error: ZADD %s %d %s fail\n",  prefix + "name", job.Id, job.Name)

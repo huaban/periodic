@@ -7,7 +7,6 @@ import (
     "log"
     "errors"
     "strconv"
-    "encoding/json"
     "periodic/sched"
     "github.com/syndtr/goleveldb/leveldb"
     "github.com/syndtr/goleveldb/leveldb/util"
@@ -68,12 +67,7 @@ func (l LevelDBDriver) Save(job *sched.Job) (err error) {
         batch.Put([]byte(PRE_SEQUENCE + "JOB"), []byte(strconv.FormatInt(job.Id, 10)))
         batch.Put([]byte(PRE_JOB_FUNC + job.Func + ":" + job.Name), []byte(strconv.FormatInt(job.Id, 10)))
     }
-    var data []byte
-    data, err = json.Marshal(job)
-    if err != nil {
-        return
-    }
-    batch.Put([]byte(PRE_JOB + strconv.FormatInt(job.Id, 10)), data)
+    batch.Put([]byte(PRE_JOB + strconv.FormatInt(job.Id, 10)), job.Bytes())
     err = l.db.Write(batch, nil)
     return
 }
@@ -100,7 +94,7 @@ func (l LevelDBDriver) Get(jobId int64) (job sched.Job, err error) {
     if err != nil {
         return
     }
-    err = json.Unmarshal(data, &job)
+    job, err = sched.NewJob(data)
     return
 }
 
@@ -117,7 +111,7 @@ func (l LevelDBDriver) GetOne(Func, name string) (job sched.Job, err error) {
     if err != nil {
         return
     }
-    err = json.Unmarshal(data, &job)
+    job, err = sched.NewJob(data)
     return
 }
 
@@ -159,7 +153,7 @@ func (iter *LevelDBIterator) Next() bool {
 func (iter *LevelDBIterator) Value() (job sched.Job) {
     data := iter.iter.Value()
     if iter.Func == nil {
-        json.Unmarshal(data, &job)
+        job, _ = sched.NewJob(data)
         return
     }
     jobId, _ := strconv.ParseInt(string(data), 10, 64)

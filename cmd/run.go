@@ -4,7 +4,6 @@ package cmd
 import (
     "net"
     "strings"
-    "encoding/json"
     "periodic/sched"
     "fmt"
     "log"
@@ -100,7 +99,7 @@ func extraJob(payload []byte) (job sched.Job, jobHandle []byte, err error) {
         err = errors.New("Invalid payload " + string(payload))
         return
     }
-    err = json.Unmarshal(parts[0], &job)
+    job, err = sched.NewJob(parts[0])
     jobHandle = parts[1]
     return
 }
