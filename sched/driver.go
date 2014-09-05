@@ -15,7 +15,7 @@ type Job struct {
 
 const (
     JOB_STATUS_READY = "ready"
-    JOB_STATUS_PROC  = "doing"
+    JOB_STATUS_PROC  = "processing"
 )
 
 
