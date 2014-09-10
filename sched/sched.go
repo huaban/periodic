@@ -22,6 +22,7 @@ type Sched struct {
     driver     StoreDriver
     jobPQ      map[string]*PriorityQueue
     PQLocker   *sync.Mutex
+    timeout    time.Duration
 }
 
 
@@ -44,7 +45,7 @@ type FuncStat struct {
 }
 
 
-func NewSched(entryPoint string, driver StoreDriver) *Sched {
+func NewSched(entryPoint string, driver StoreDriver, timeout time.Duration) *Sched {
     sched := new(Sched)
     sched.timer = time.NewTimer(1 * time.Hour)
     sched.grabQueue = list.New()
@@ -56,6 +57,7 @@ func NewSched(entryPoint string, driver StoreDriver) *Sched {
     sched.Funcs = make(map[string]*FuncStat)
     sched.driver = driver
     sched.jobPQ = make(map[string]*PriorityQueue)
+    sched.timeout = timeout
     return sched
 }
 
@@ -77,6 +79,9 @@ func (sched *Sched) Serve() {
         conn, err := listen.Accept()
         if err != nil {
             log.Fatal(err)
+        }
+        if sched.timeout > 0 {
+            conn.SetDeadline(time.Now().Add(sched.timeout * time.Second))
         }
         sched.HandleConnection(conn)
     }

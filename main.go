@@ -43,6 +43,11 @@ func main() {
             Name: "d",
             Usage: "Enable daemon mode",
         },
+        cli.IntFlag{
+            Name: "timeout",
+            Value: 0,
+            Usage: "The socket timeout",
+        },
     }
     app.Commands = []cli.Command{
         {
@@ -73,7 +78,7 @@ func main() {
                 },
                 cli.IntFlag{
                     Name: "t",
-                    Value: 500,
+                    Value: 0,
                     Usage: "job running timeout",
                 },
                 cli.IntFlag{
@@ -156,8 +161,8 @@ func main() {
             } else {
                 st = drivers.NewLevelDBDriver(c.String("dbpath"))
             }
-
-            sched := sch.NewSched(c.String("H"), st)
+            timeout := time.Duration(c.Int("timeout"))
+            sched := sch.NewSched(c.String("H"), st, timeout)
             go sched.Serve()
             s := make(chan os.Signal, 1)
             signal.Notify(s, os.Interrupt, os.Kill)
