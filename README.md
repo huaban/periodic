@@ -39,4 +39,4 @@ Quick start
 Depends
 -------
 
-    [go](http://golang.org)
+[go](http://golang.org)
