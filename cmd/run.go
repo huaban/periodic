@@ -9,23 +9,42 @@ import (
     "log"
     "bytes"
     "errors"
+    "io"
     "os"
     "os/exec"
     "strconv"
+    "time"
 )
 
 
 func Run(entryPoint, Func, cmd string) {
     parts := strings.SplitN(entryPoint, "://", 2)
-    c, err := net.Dial(parts[0], parts[1])
-    if err != nil {
-        log.Fatal(err)
+    for {
+        c, err := net.Dial(parts[0], parts[1])
+        if err != nil {
+            if err != io.EOF {
+                log.Printf("Error: %s\n", err.Error())
+            }
+            log.Printf("Wait 5 second to reconnecting")
+            time.Sleep(5 * time.Second)
+            continue
+        }
+        conn := sched.Conn{Conn: c}
+        err = handleWorker(conn, Func, cmd)
+        if err != nil {
+            if err != io.EOF {
+                log.Printf("Error: %s\n", err.Error())
+            }
+        }
+        conn.Close()
     }
-    conn := sched.Conn{Conn: c}
-    defer conn.Close()
+}
+
+
+func handleWorker(conn sched.Conn, Func, cmd string) (err error) {
     err = conn.Send(sched.TYPE_WORKER.Bytes())
     if err != nil {
-        log.Fatal(err)
+        return
     }
     buf := bytes.NewBuffer(nil)
     buf.WriteByte(byte(sched.CAN_DO))
@@ -33,7 +52,7 @@ func Run(entryPoint, Func, cmd string) {
     buf.WriteString(Func)
     err = conn.Send(buf.Bytes())
     if err != nil {
-        log.Fatal(err)
+        return
     }
 
     var payload []byte
@@ -42,11 +61,11 @@ func Run(entryPoint, Func, cmd string) {
     for {
         err = conn.Send(sched.GRAB_JOB.Bytes())
         if err != nil {
-            log.Fatal(err)
+            return
         }
         payload, err = conn.Receive()
         if err != nil {
-            log.Fatal(err)
+            return
         }
         job, jobHandle, err = extraJob(payload)
         realCmd := strings.Split(cmd, " ")
@@ -65,7 +84,7 @@ func Run(entryPoint, Func, cmd string) {
                 break
             }
             if strings.HasPrefix(line, "SCHED_LATER") {
-                parts = strings.SplitN(line[:len(line) - 1], " ", 2)
+                parts := strings.SplitN(line[:len(line) - 1], " ", 2)
                 later := strings.Trim(parts[1], " ")
                 schedLater, _ = strconv.Atoi(later)
             } else if strings.HasPrefix(line, "FAIL") {
@@ -89,6 +108,9 @@ func Run(entryPoint, Func, cmd string) {
             buf.WriteString(strconv.Itoa(schedLater))
         }
         err = conn.Send(buf.Bytes())
+        if err != nil {
+            return
+        }
     }
 }
 
