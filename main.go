@@ -27,17 +27,17 @@ func main() {
         cli.StringFlag{
             Name: "redis",
             Value: "tcp://127.0.0.1:6379",
-            Usage: "The redis server address, required driver redis",
+            Usage: "The redis server address, required for driver redis",
         },
         cli.StringFlag{
             Name: "driver",
             Value: "leveldb",
-            Usage: "The driver driver [leveldb, redis]",
+            Usage: "The driver [leveldb, redis]",
         },
         cli.StringFlag{
             Name: "dbpath",
             Value: "leveldb",
-            Usage: "The db path, required driver leveldb",
+            Usage: "The db path, required for driver leveldb",
         },
         cli.BoolFlag{
             Name: "d",
