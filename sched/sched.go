@@ -67,7 +67,7 @@ func (sched *Sched) Serve() {
     if parts[0] == "unix" {
         sockCheck(parts[1])
     }
-    sched.checkJobQueue()
+    sched.loadJobQueue()
     go sched.handle()
     listen, err := net.Listen(parts[0], parts[1])
     if err != nil {
@@ -417,7 +417,7 @@ func (sched *Sched) pushJobPQ(job Job) bool {
 }
 
 
-func (sched *Sched) checkJobQueue() {
+func (sched *Sched) loadJobQueue() {
     updateQueue := make([]Job, 0)
     removeQueue := make([]Job, 0)
     var now = time.Now()
