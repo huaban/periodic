@@ -1,9 +1,5 @@
 package sched
 
-import (
-    "container/heap"
-)
-
 // An Item is something we manage in a priority queue.
 type Item struct {
     value    int64 // The value of the item; arbitrary.
@@ -42,11 +38,4 @@ func (pq *PriorityQueue) Pop() interface{} {
     item.index = -1 // for safety
     *pq = old[0 : n-1]
     return item
-}
-
-// update modifies the priority and value of an Item in the queue.
-func (pq *PriorityQueue) update(item *Item, value int64, priority int64) {
-    item.value = value
-    item.priority = priority
-    heap.Fix(pq, item.index)
 }
