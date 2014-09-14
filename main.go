@@ -4,6 +4,7 @@ import (
     "os"
     "log"
     "time"
+    "runtime"
     "os/signal"
     "periodic/drivers"
     sch "periodic/sched"
@@ -47,6 +48,12 @@ func main() {
             Name: "timeout",
             Value: 0,
             Usage: "The socket timeout",
+        },
+        cli.IntFlag{
+            Name: "cpus",
+            Value: runtime.NumCPU(),
+            Usage: "The runtime.GOMAXPROCS",
+            EnvVar: "GOMAXPROCS",
         },
     }
     app.Commands = []cli.Command{
@@ -161,6 +168,7 @@ func main() {
             } else {
                 st = drivers.NewLevelDBDriver(c.String("dbpath"))
             }
+            runtime.GOMAXPROCS(c.Int("cpus"))
             timeout := time.Duration(c.Int("timeout"))
             sched := sch.NewSched(c.String("H"), st, timeout)
             go sched.Serve()
