@@ -104,7 +104,7 @@ func (client *Client) HandleSubmitJob(payload []byte) (err error) {
         sched.pushJobPQ(job)
     }
     sched.Notify()
-    err = conn.Send([]byte("ok"))
+    err = conn.Send(SUCCESS.Bytes())
     return
 }
 
@@ -142,6 +142,6 @@ func (client *Client) HandleDropFunc(payload []byte) (err error) {
         delete(client.sched.Funcs, Func)
         delete(client.sched.jobPQ, Func)
     }
-    err = client.conn.Send([]byte("ok"))
+    err = client.conn.Send(SUCCESS.Bytes())
     return
 }

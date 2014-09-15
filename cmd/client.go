@@ -35,5 +35,5 @@ func SubmitJob(entryPoint string, job sched.Job) {
     if err != nil {
         log.Fatal(err)
     }
-    fmt.Printf("%s\n", payload)
+    fmt.Printf("%s\n", sched.Command(payload[0]).String())
 }

@@ -50,6 +50,8 @@ func (c Command) String() string {
             return "STATUS"
         case 15:
             return "DROP_FUNC"
+        case 16:
+            return "SUCCESS"
     }
     panic("Unknow Command " + strconv.Itoa(int(c)))
 }
@@ -77,6 +79,7 @@ const (
     SUBMIT_JOB  // client
     STATUS      // client
     DROP_FUNC   // client
+    SUCCESS     // server
 )
 
 type ClientType int
