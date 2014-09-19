@@ -36,12 +36,12 @@ func (worker *Worker) IsAlive() bool {
 
 func (worker *Worker) HandleDo(job Job) (err error){
     worker.jobQueue.PushBack(job)
-    Pack, err := PackJob(job)
+    pack, err := PackJob(job)
     if err != nil {
         log.Printf("Error: PackJob %d %s\n", job.Id, err.Error())
         return nil
     }
-    err = worker.conn.Send(Pack)
+    err = worker.conn.Send(pack)
     return
 }
 
