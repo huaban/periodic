@@ -13,7 +13,7 @@ import (
 
 type Sched struct {
     timer      *time.Timer
-    grabQueue  *list.List
+    grabQueue  *GrabQueue
     jobQueue   *list.List
     entryPoint string
     JobLocker  *sync.Mutex
@@ -48,7 +48,7 @@ type FuncStat struct {
 func NewSched(entryPoint string, driver StoreDriver, timeout time.Duration) *Sched {
     sched := new(Sched)
     sched.timer = time.NewTimer(1 * time.Hour)
-    sched.grabQueue = list.New()
+    sched.grabQueue = NewGrabQueue()
     sched.jobQueue = list.New()
     sched.entryPoint = entryPoint
     sched.JobLocker = new(sync.Mutex)
@@ -169,22 +169,22 @@ func (sched *Sched) isDoJob(job Job) bool {
 }
 
 
-func (sched *Sched) SubmitJob(worker *Worker, job Job) {
+func (sched *Sched) SubmitJob(grabItem GrabItem, job Job) bool {
     defer sched.JobLocker.Unlock()
     sched.JobLocker.Lock()
     if job.Name == "" {
         sched.driver.Delete(job.Id)
-        return
+        return true
     }
     if sched.isDoJob(job) {
-        return
+        return true
     }
-    if !worker.alive {
-        return
+    if !grabItem.w.alive {
+        return false
     }
-    if err := worker.HandleDo(job); err != nil {
-        worker.alive = false
-        return
+    if err := grabItem.w.HandleDo(grabItem.msgId, job); err != nil {
+        grabItem.w.alive = false
+        return false
     }
     now := time.Now()
     current := int64(now.Unix())
@@ -193,7 +193,8 @@ func (sched *Sched) SubmitJob(worker *Worker, job Job) {
     sched.driver.Save(&job)
     sched.IncrStatProc(job)
     sched.jobQueue.PushBack(job)
-    sched.removeGrabQueue(worker)
+    sched.grabQueue.Remove(grabItem)
+    return true
 }
 
 
@@ -266,7 +267,7 @@ func (sched *Sched) handle() {
         schedJob, err := sched.driver.Get(lessItem.value)
 
         if err != nil {
-            log.Printf("Error: job[%d] not exists.", lessItem.value)
+            log.Printf("Error: Get job: %d %v\n", lessItem.value, err)
             continue
         }
 
@@ -282,22 +283,12 @@ func (sched *Sched) handle() {
             }
         }
 
-        isSubmited := false
-        for e := sched.grabQueue.Front(); e != nil; e = e.Next() {
-            worker := e.Value.(*Worker)
-            for _, Func := range worker.Funcs {
-                if schedJob.Func == Func {
-                    sched.SubmitJob(worker, schedJob)
-                    isSubmited = true
-                    break
-                }
+        grabItem, err := sched.grabQueue.Get(schedJob.Func)
+        if err == nil {
+            if !sched.SubmitJob(grabItem, schedJob) {
+                sched.pushJobPQ(schedJob)
             }
-            if isSubmited {
-                break
-            }
-        }
-
-        if !isSubmited {
+        } else {
             sched.pushJobPQ(schedJob)
         }
     }
@@ -383,15 +374,6 @@ func (sched *Sched) SchedLater(jobId int64, delay int64) {
     sched.driver.Save(&job)
     sched.pushJobPQ(job)
     return
-}
-
-
-func (sched *Sched) removeGrabQueue(worker *Worker) {
-    for e := sched.grabQueue.Front(); e != nil; e = e.Next() {
-        if e.Value.(*Worker) == worker {
-            sched.grabQueue.Remove(e)
-        }
-    }
 }
 
 

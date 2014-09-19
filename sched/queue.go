@@ -1,5 +1,10 @@
 package sched
 
+import (
+    "fmt"
+    "container/list"
+)
+
 // An Item is something we manage in a priority queue.
 type Item struct {
     value    int64 // The value of the item; arbitrary.
@@ -38,4 +43,74 @@ func (pq *PriorityQueue) Pop() interface{} {
     item.index = -1 // for safety
     *pq = old[0 : n-1]
     return item
+}
+
+
+type GrabItem struct {
+    w     *Worker
+    msgId int64
+}
+
+
+func (item GrabItem) Has(Func string) bool {
+    for _, F := range item.w.Funcs {
+        if F == Func {
+            return true
+        }
+    }
+    return false
+}
+
+
+type GrabQueue struct {
+    list   *list.List
+}
+
+
+func (g *GrabQueue) Push(item GrabItem) {
+    g.list.PushBack(item)
+}
+
+
+func (g *GrabQueue) Get(Func string) (item GrabItem, err error) {
+    for e := g.list.Front(); e != nil; e = e.Next() {
+        item = e.Value.(GrabItem)
+        if item.Has(Func) {
+            return
+        }
+    }
+    err = fmt.Errorf("func name: %s not found.", Func)
+    return
+}
+
+
+func (g *GrabQueue) Remove(item GrabItem) {
+    for e := g.list.Front(); e != nil; e = e.Next() {
+        item1 := e.Value.(GrabItem)
+        if item1 == item {
+            g.list.Remove(e)
+        }
+    }
+}
+
+
+func (g *GrabQueue) RemoveWorker(worker *Worker) {
+    for e := g.list.Front(); e != nil; e = e.Next() {
+        item := e.Value.(GrabItem)
+        if item.w == worker {
+            g.list.Remove(e)
+        }
+    }
+}
+
+
+func (g GrabQueue) Len() int {
+    return g.list.Len()
+}
+
+
+func NewGrabQueue() *GrabQueue {
+    g := new(GrabQueue)
+    g.list = list.New()
+    return g
 }

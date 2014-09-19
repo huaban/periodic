@@ -23,7 +23,10 @@ func SubmitJob(entryPoint string, job sched.Job) {
     if err != nil {
         log.Fatal(err)
     }
+    var msgId = []byte("100")
     buf := bytes.NewBuffer(nil)
+    buf.Write(msgId)
+    buf.Write(sched.NULL_CHAR)
     buf.WriteByte(byte(sched.SUBMIT_JOB))
     buf.Write(sched.NULL_CHAR)
     buf.Write(job.Bytes())
@@ -35,5 +38,6 @@ func SubmitJob(entryPoint string, job sched.Job) {
     if err != nil {
         log.Fatal(err)
     }
-    fmt.Printf("%s\n", sched.Command(payload[0]).String())
+    _, cmd, _ := sched.ParseCommand(payload)
+    fmt.Printf("%s\n", cmd.String())
 }

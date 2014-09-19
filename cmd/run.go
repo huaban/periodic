@@ -46,7 +46,10 @@ func handleWorker(conn sched.Conn, Func, cmd string) (err error) {
     if err != nil {
         return
     }
+    var msgId = []byte("100")
     buf := bytes.NewBuffer(nil)
+    buf.Write(msgId)
+    buf.Write(sched.NULL_CHAR)
     buf.WriteByte(byte(sched.CAN_DO))
     buf.Write(sched.NULL_CHAR)
     buf.WriteString(Func)
@@ -59,7 +62,11 @@ func handleWorker(conn sched.Conn, Func, cmd string) (err error) {
     var job sched.Job
     var jobHandle []byte
     for {
-        err = conn.Send(sched.GRAB_JOB.Bytes())
+        buf = bytes.NewBuffer(nil)
+        buf.Write(msgId)
+        buf.Write(sched.NULL_CHAR)
+        buf.Write(sched.GRAB_JOB.Bytes())
+        err = conn.Send(buf.Bytes())
         if err != nil {
             return
         }
@@ -93,7 +100,9 @@ func handleWorker(conn sched.Conn, Func, cmd string) (err error) {
                 fmt.Print(line)
             }
         }
-        buf := bytes.NewBuffer(nil)
+        buf = bytes.NewBuffer(nil)
+        buf.Write(msgId)
+        buf.Write(sched.NULL_CHAR)
         if err != nil || fail {
             buf.WriteByte(byte(sched.JOB_FAIL))
         } else if schedLater > 0 {
@@ -116,12 +125,12 @@ func handleWorker(conn sched.Conn, Func, cmd string) (err error) {
 
 
 func extraJob(payload []byte) (job sched.Job, jobHandle []byte, err error) {
-    parts := bytes.SplitN(payload, sched.NULL_CHAR, 2)
-    if len(parts) != 2 {
+    parts := bytes.SplitN(payload, sched.NULL_CHAR, 3)
+    if len(parts) != 3 {
         err = errors.New("Invalid payload " + string(payload))
         return
     }
-    job, err = sched.NewJob(parts[0])
+    job, err = sched.NewJob(parts[2])
     jobHandle = parts[1]
     return
 }

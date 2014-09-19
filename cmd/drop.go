@@ -23,7 +23,10 @@ func DropFunc(entryPoint, Func string) {
     if err != nil {
         log.Fatal(err)
     }
+    var msgId = []byte("100")
     buf := bytes.NewBuffer(nil)
+    buf.Write(msgId)
+    buf.Write(sched.NULL_CHAR)
     buf.WriteByte(byte(sched.DROP_FUNC))
     buf.Write(sched.NULL_CHAR)
     buf.WriteString(Func)
@@ -35,5 +38,6 @@ func DropFunc(entryPoint, Func string) {
     if err != nil {
         log.Fatal(err)
     }
-    fmt.Printf("%s\n", payload)
+    _, cmd, _ := sched.ParseCommand(payload)
+    fmt.Printf("%s\n", cmd)
 }

@@ -108,4 +108,4 @@ const (
 )
 
 
-var NULL_CHAR = []byte("\x01")
+var NULL_CHAR = []byte("\x00\x01")

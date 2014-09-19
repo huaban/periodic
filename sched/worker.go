@@ -34,14 +34,15 @@ func (worker *Worker) IsAlive() bool {
 }
 
 
-func (worker *Worker) HandleDo(job Job) (err error){
+func (worker *Worker) HandleDo(msgId int64, job Job) (err error){
     worker.jobQueue.PushBack(job)
-    pack, err := PackJob(job)
-    if err != nil {
-        log.Printf("Error: PackJob %d %s\n", job.Id, err.Error())
-        return nil
-    }
-    err = worker.conn.Send(pack)
+    buf := bytes.NewBuffer(nil)
+    buf.WriteString(strconv.FormatInt(msgId, 10))
+    buf.Write(NULL_CHAR)
+    buf.WriteString(strconv.FormatInt(job.Id, 10))
+    buf.Write(NULL_CHAR)
+    buf.Write(job.Bytes())
+    err = worker.conn.Send(buf.Bytes())
     return
 }
 
@@ -85,9 +86,13 @@ func (worker *Worker) HandleFail(jobId int64) (err error) {
 }
 
 
-func (worker *Worker) HandleWaitForJob() (err error) {
-    err = worker.conn.Send(WAIT_JOB.Bytes())
-    return nil
+func (worker *Worker) HandleCommand(msgId int64, cmd Command) (err error) {
+    buf := bytes.NewBuffer(nil)
+    buf.WriteString(strconv.FormatInt(msgId, 10))
+    buf.Write(NULL_CHAR)
+    buf.Write(cmd.Bytes())
+    err = worker.conn.Send(buf.Bytes())
+    return
 }
 
 
@@ -98,14 +103,12 @@ func (worker *Worker) HandleSchedLater(jobId, delay int64) (err error){
 }
 
 
-func (worker *Worker) HandleNoJob() (err error){
-    err = worker.conn.Send(NO_JOB.Bytes())
-    return
-}
-
-
-func (worker *Worker) HandleGrabJob() (err error){
-    worker.sched.grabQueue.PushBack(worker)
+func (worker *Worker) HandleGrabJob(msgId int64) (err error){
+    item := GrabItem{
+        w: worker,
+        msgId: msgId,
+    }
+    worker.sched.grabQueue.Push(item)
     worker.sched.Notify()
     return nil
 }
@@ -115,6 +118,8 @@ func (worker *Worker) Handle() {
     var payload []byte
     var err error
     var conn = worker.conn
+    var msgId int64
+    var cmd Command
     defer func() {
         if x := recover(); x != nil {
             log.Printf("[Worker] painc: %v\n", x)
@@ -130,21 +135,22 @@ func (worker *Worker) Handle() {
             break
         }
 
+        msgId, cmd, payload = ParseCommand(payload)
 
-        switch Command(payload[0]) {
+        switch cmd {
         case GRAB_JOB:
-            err = worker.HandleGrabJob()
+            err = worker.HandleGrabJob(msgId)
             break
         case JOB_DONE:
-            jobId, _ := strconv.ParseInt(string(payload[2:]), 10, 0)
+            jobId, _ := strconv.ParseInt(string(payload), 10, 0)
             err = worker.HandleDone(jobId)
             break
         case JOB_FAIL:
-            jobId, _ := strconv.ParseInt(string(payload[2:]), 10, 0)
+            jobId, _ := strconv.ParseInt(string(payload), 10, 0)
             err = worker.HandleFail(jobId)
             break
         case SCHED_LATER:
-            parts := bytes.SplitN(payload[2:], NULL_CHAR, 2)
+            parts := bytes.SplitN(payload, NULL_CHAR, 2)
             if len(parts) != 2 {
                 log.Printf("Error: invalid format.")
                 break
@@ -154,19 +160,19 @@ func (worker *Worker) Handle() {
             err = worker.HandleSchedLater(jobId, delay)
             break
         case SLEEP:
-            err = conn.Send(NOOP.Bytes())
+            err = worker.HandleCommand(msgId, NOOP)
             break
         case PING:
-            err = conn.Send(PONG.Bytes())
+            err = worker.HandleCommand(msgId, PONG)
             break
         case CAN_DO:
-            err = worker.HandleCanDo(string(payload[2:]))
+            err = worker.HandleCanDo(string(payload))
             break
         case CANT_DO:
-            err = worker.HandleCanNoDo(string(payload[2:]))
+            err = worker.HandleCanNoDo(string(payload))
             break
         default:
-            err = conn.Send(UNKNOWN.Bytes())
+            err = worker.HandleCommand(msgId, UNKNOWN)
             break
         }
         if err != nil {
@@ -186,7 +192,7 @@ func (worker *Worker) Handle() {
 func (worker *Worker) Close() {
     defer worker.sched.Notify()
     defer worker.conn.Close()
-    worker.sched.removeGrabQueue(worker)
+    worker.sched.grabQueue.RemoveWorker(worker)
     worker.alive = false
     for e := worker.jobQueue.Front(); e != nil; e = e.Next() {
         worker.sched.Fail(e.Value.(Job).Id)
