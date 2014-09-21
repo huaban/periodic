@@ -8,7 +8,7 @@ import (
     "os/signal"
     "github.com/Lupino/periodic/drivers"
     "github.com/Lupino/periodic"
-    "github.com/Lupino/periodic/cmd/subcmd"
+    "github.com/Lupino/periodic/cmd/periodic/subcmd"
     "github.com/codegangsta/cli"
 )
 
