@@ -36,3 +36,10 @@ Depends
 -------
 
 [go](http://golang.org)
+
+
+Periodic clients
+----------------
+
+* [node-periodic](https://github.com/Lupino/node-periodic)
+* [python-aio-periodic](https://github.com/Lupino/python-aio-periodic)
