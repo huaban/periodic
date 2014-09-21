@@ -1,15 +1,11 @@
 Periodic task system
 ====================
 
-Build
------
+Install
+-------
 
-    cd $GOPATH/src
-    git clone url/to/periodic.git
-    cd periodic
-    go get -v -d
-    go install
-    $GOPATH/bin/periodic -h
+    go get -v github.com/Lupino/periodic/cmd/periodic
+    $GOPATH/bin/periodic -h # show the help
 
 
 Quick start
