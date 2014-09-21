@@ -126,15 +126,12 @@ func (client *Client) HandleSubmitJob(msgId int64, payload []byte) (err error) {
 
 
 func (client *Client) HandleStatus(msgId int64) (err error) {
-    var conn = client.conn
-    var sched = client.sched
-    data, _ := json.Marshal(sched.Funcs)
+    data, _ := json.Marshal(client.sched.Funcs)
     buf := bytes.NewBuffer(nil)
     buf.WriteString(strconv.FormatInt(msgId, 10))
     buf.Write(NULL_CHAR)
     buf.Write(data)
     err = client.conn.Send(buf.Bytes())
-    err = conn.Send(data)
     return
 }
 
