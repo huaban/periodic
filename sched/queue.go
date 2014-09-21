@@ -2,6 +2,7 @@ package sched
 
 import (
     "fmt"
+    "sync"
     "container/list"
 )
 
@@ -64,15 +65,20 @@ func (item GrabItem) Has(Func string) bool {
 
 type GrabQueue struct {
     list   *list.List
+    locker *sync.Mutex
 }
 
 
 func (g *GrabQueue) Push(item GrabItem) {
+    defer g.locker.Unlock()
+    g.locker.Lock()
     g.list.PushBack(item)
 }
 
 
 func (g *GrabQueue) Get(Func string) (item GrabItem, err error) {
+    defer g.locker.Unlock()
+    g.locker.Lock()
     for e := g.list.Front(); e != nil; e = e.Next() {
         item = e.Value.(GrabItem)
         if item.Has(Func) {
@@ -85,6 +91,8 @@ func (g *GrabQueue) Get(Func string) (item GrabItem, err error) {
 
 
 func (g *GrabQueue) Remove(item GrabItem) {
+    defer g.locker.Unlock()
+    g.locker.Lock()
     for e := g.list.Front(); e != nil; e = e.Next() {
         item1 := e.Value.(GrabItem)
         if item1 == item {
@@ -95,6 +103,8 @@ func (g *GrabQueue) Remove(item GrabItem) {
 
 
 func (g *GrabQueue) RemoveWorker(worker *Worker) {
+    defer g.locker.Unlock()
+    g.locker.Lock()
     for e := g.list.Front(); e != nil; e = e.Next() {
         item := e.Value.(GrabItem)
         if item.w == worker {
@@ -112,5 +122,6 @@ func (g GrabQueue) Len() int {
 func NewGrabQueue() *GrabQueue {
     g := new(GrabQueue)
     g.list = list.New()
+    g.locker = new(sync.Mutex)
     return g
 }
