@@ -9,7 +9,7 @@ Build
     cd periodic
     go get -v -d
     go install
-    $GOAPTH/bin/periodic -h
+    $GOPATH/bin/periodic -h
 
 
 Quick start
@@ -17,7 +17,7 @@ Quick start
 
 ### Start periodic server
 
-    $GOAPTH/bin/periodic -d
+    $GOPATH/bin/periodic -d
 
 ### A worker to ls a dirctory every five second.
 
@@ -26,14 +26,14 @@ Quick start
     ls -lrth $@
     echo "SCHED_LATER 5"
 
-    chmod +x ls-every-five-second.sh
+    $ chmod +x ls-every-five-second.sh
 
-    $GOAPTH/bin/periodic run -f ls5 --exec `pwd`/ls-every-five-second.sh
+    $GOPATH/bin/periodic run -f ls5 --exec `pwd`/ls-every-five-second.sh
 
 
 ### Submit job
 
-    $GOAPTH/bin/periodic submit -f ls5 -n /tmp/
+    $GOPATH/bin/periodic submit -f ls5 -n /tmp/
 
 
 Depends
