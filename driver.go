@@ -1,4 +1,4 @@
-package sched
+package periodic
 
 import (
     "encoding/json"

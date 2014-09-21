@@ -6,9 +6,9 @@ import (
     "time"
     "runtime"
     "os/signal"
-    "periodic/drivers"
-    sch "periodic/sched"
-    "periodic/cmd"
+    "github.com/Lupino/periodic/drivers"
+    "github.com/Lupino/periodic"
+    "github.com/Lupino/periodic/cmd/subcmd"
     "github.com/codegangsta/cli"
 )
 
@@ -61,7 +61,7 @@ func main() {
             Name: "status",
             Usage: "Show status",
             Action: func(c *cli.Context) {
-                cmd.ShowStatus(c.GlobalString("H"))
+                subcmd.ShowStatus(c.GlobalString("H"))
             },
         },
         {
@@ -89,13 +89,13 @@ func main() {
                     Usage: "job running timeout",
                 },
                 cli.IntFlag{
-                    Name: "sched_later",
+                    Name: "periodiced_later",
                     Value: 0,
-                    Usage: "job sched_later",
+                    Usage: "job periodiced_later",
                 },
             },
             Action: func(c *cli.Context) {
-                var job = sch.Job{
+                var job = periodic.Job{
                     Name: c.String("n"),
                     Func: c.String("f"),
                     Args: c.String("args"),
@@ -105,10 +105,10 @@ func main() {
                     cli.ShowCommandHelp(c, "submit")
                     log.Fatal("Job name and func is require")
                 }
-                delay := c.Int("sched_later")
+                delay := c.Int("periodiced_later")
                 var now = time.Now()
                 job.SchedAt = int64(now.Unix()) + int64(delay)
-                cmd.SubmitJob(c.GlobalString("H"), job)
+                subcmd.SubmitJob(c.GlobalString("H"), job)
             },
         },
         {
@@ -127,7 +127,7 @@ func main() {
                     cli.ShowCommandHelp(c, "drop")
                     log.Fatal("function name is required")
                 }
-                cmd.DropFunc(c.GlobalString("H"), Func)
+                subcmd.DropFunc(c.GlobalString("H"), Func)
             },
         },
         {
@@ -156,13 +156,13 @@ func main() {
                     cli.ShowCommandHelp(c, "run")
                     log.Fatal("command is required")
                 }
-                cmd.Run(c.GlobalString("H"), Func, exec)
+                subcmd.Run(c.GlobalString("H"), Func, exec)
             },
         },
     }
     app.Action = func(c *cli.Context) {
         if c.Bool("d") {
-            var st sch.StoreDriver
+            var st periodic.StoreDriver
             if c.String("driver") == "redis" {
                 st = drivers.NewRedisDriver(c.String("redis"))
             } else {
@@ -170,8 +170,8 @@ func main() {
             }
             runtime.GOMAXPROCS(c.Int("cpus"))
             timeout := time.Duration(c.Int("timeout"))
-            sched := sch.NewSched(c.String("H"), st, timeout)
-            go sched.Serve()
+            periodicd := periodic.NewSched(c.String("H"), st, timeout)
+            go periodicd.Serve()
             s := make(chan os.Signal, 1)
             signal.Notify(s, os.Interrupt, os.Kill)
             <-s

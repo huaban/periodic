@@ -1,10 +1,10 @@
-package cmd
+package subcmd
 
 
 import (
     "net"
     "strings"
-    "periodic/sched"
+    "github.com/Lupino/periodic"
     "fmt"
     "log"
     "bytes"
@@ -29,7 +29,7 @@ func Run(entryPoint, Func, cmd string) {
             time.Sleep(5 * time.Second)
             continue
         }
-        conn := sched.Conn{Conn: c}
+        conn := periodic.Conn{Conn: c}
         err = handleWorker(conn, Func, cmd)
         if err != nil {
             if err != io.EOF {
@@ -41,17 +41,17 @@ func Run(entryPoint, Func, cmd string) {
 }
 
 
-func handleWorker(conn sched.Conn, Func, cmd string) (err error) {
-    err = conn.Send(sched.TYPE_WORKER.Bytes())
+func handleWorker(conn periodic.Conn, Func, cmd string) (err error) {
+    err = conn.Send(periodic.TYPE_WORKER.Bytes())
     if err != nil {
         return
     }
     var msgId = []byte("100")
     buf := bytes.NewBuffer(nil)
     buf.Write(msgId)
-    buf.Write(sched.NULL_CHAR)
-    buf.WriteByte(byte(sched.CAN_DO))
-    buf.Write(sched.NULL_CHAR)
+    buf.Write(periodic.NULL_CHAR)
+    buf.WriteByte(byte(periodic.CAN_DO))
+    buf.Write(periodic.NULL_CHAR)
     buf.WriteString(Func)
     err = conn.Send(buf.Bytes())
     if err != nil {
@@ -59,13 +59,13 @@ func handleWorker(conn sched.Conn, Func, cmd string) (err error) {
     }
 
     var payload []byte
-    var job sched.Job
+    var job periodic.Job
     var jobHandle []byte
     for {
         buf = bytes.NewBuffer(nil)
         buf.Write(msgId)
-        buf.Write(sched.NULL_CHAR)
-        buf.Write(sched.GRAB_JOB.Bytes())
+        buf.Write(periodic.NULL_CHAR)
+        buf.Write(periodic.GRAB_JOB.Bytes())
         err = conn.Send(buf.Bytes())
         if err != nil {
             return
@@ -102,18 +102,18 @@ func handleWorker(conn sched.Conn, Func, cmd string) (err error) {
         }
         buf = bytes.NewBuffer(nil)
         buf.Write(msgId)
-        buf.Write(sched.NULL_CHAR)
+        buf.Write(periodic.NULL_CHAR)
         if err != nil || fail {
-            buf.WriteByte(byte(sched.JOB_FAIL))
+            buf.WriteByte(byte(periodic.JOB_FAIL))
         } else if schedLater > 0 {
-            buf.WriteByte(byte(sched.SCHED_LATER))
+            buf.WriteByte(byte(periodic.SCHED_LATER))
         } else {
-            buf.WriteByte(byte(sched.JOB_DONE))
+            buf.WriteByte(byte(periodic.JOB_DONE))
         }
-        buf.Write(sched.NULL_CHAR)
+        buf.Write(periodic.NULL_CHAR)
         buf.Write(jobHandle)
         if schedLater > 0 {
-            buf.Write(sched.NULL_CHAR)
+            buf.Write(periodic.NULL_CHAR)
             buf.WriteString(strconv.Itoa(schedLater))
         }
         err = conn.Send(buf.Bytes())
@@ -124,13 +124,13 @@ func handleWorker(conn sched.Conn, Func, cmd string) (err error) {
 }
 
 
-func extraJob(payload []byte) (job sched.Job, jobHandle []byte, err error) {
-    parts := bytes.SplitN(payload, sched.NULL_CHAR, 3)
+func extraJob(payload []byte) (job periodic.Job, jobHandle []byte, err error) {
+    parts := bytes.SplitN(payload, periodic.NULL_CHAR, 3)
     if len(parts) != 3 {
         err = errors.New("Invalid payload " + string(payload))
         return
     }
-    job, err = sched.NewJob(parts[2])
+    job, err = periodic.NewJob(parts[2])
     jobHandle = parts[1]
     return
 }
