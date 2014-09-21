@@ -47,7 +47,9 @@ Quick start
     $ vim ls-every-five-second.sh
     #!/usr/bin/env bash
     ls -lrth $@
-    echo "SCHED_LATER 5"
+    echo "SCHED_LATER 5" # tell periodic do the job 5 second later
+    # echo "DONE" # tell periodic the job is done
+    # echo "FAIL" # tell periodic the job is fail
 
     $ chmod +x ls-every-five-second.sh
 
