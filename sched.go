@@ -14,7 +14,7 @@ import (
 type Sched struct {
     timer      *time.Timer
     grabQueue  *GrabQueue
-    jobQueue   *list.List
+    procQueue  *list.List
     entryPoint string
     JobLocker  *sync.Mutex
     Funcs      map[string]*FuncStat
@@ -49,7 +49,7 @@ func NewSched(entryPoint string, driver StoreDriver, timeout time.Duration) *Sch
     sched := new(Sched)
     sched.timer = time.NewTimer(1 * time.Hour)
     sched.grabQueue = NewGrabQueue()
-    sched.jobQueue = list.New()
+    sched.procQueue = list.New()
     sched.entryPoint = entryPoint
     sched.JobLocker = new(sync.Mutex)
     sched.PQLocker = new(sync.Mutex)
@@ -120,7 +120,7 @@ func (sched *Sched) Done(jobId int64) {
     defer sched.Notify()
     defer sched.JobLocker.Unlock()
     sched.JobLocker.Lock()
-    removeListJob(sched.jobQueue, jobId)
+    removeListJob(sched.procQueue, jobId)
     job, err := sched.driver.Get(jobId)
     if err == nil {
         sched.driver.Delete(jobId)
@@ -135,7 +135,7 @@ func (sched *Sched) isDoJob(job Job) bool {
     now := time.Now()
     current := int64(now.Unix())
     ret := false
-    for e := sched.jobQueue.Front(); e != nil; e = e.Next() {
+    for e := sched.procQueue.Front(); e != nil; e = e.Next() {
         chk := e.Value.(Job)
         runAt := chk.RunAt
         if runAt < chk.SchedAt {
@@ -149,7 +149,7 @@ func (sched *Sched) isDoJob(job Job) bool {
                 sched.driver.Save(&newJob)
                 sched.pushJobPQ(newJob)
             }
-            sched.jobQueue.Remove(e)
+            sched.procQueue.Remove(e)
             continue
         }
         if chk.Id == job.Id {
@@ -192,7 +192,7 @@ func (sched *Sched) SubmitJob(grabItem GrabItem, job Job) bool {
     job.RunAt = current
     sched.driver.Save(&job)
     sched.IncrStatProc(job)
-    sched.jobQueue.PushBack(job)
+    sched.procQueue.PushBack(job)
     sched.grabQueue.Remove(grabItem)
     return true
 }
@@ -299,7 +299,7 @@ func (sched *Sched) Fail(jobId int64) {
     defer sched.Notify()
     defer sched.JobLocker.Unlock()
     sched.JobLocker.Lock()
-    removeListJob(sched.jobQueue, jobId)
+    removeListJob(sched.procQueue, jobId)
     job, _ := sched.driver.Get(jobId)
     sched.DecrStatProc(job)
     job.Status = JOB_STATUS_READY
@@ -365,7 +365,7 @@ func (sched *Sched) SchedLater(jobId int64, delay int64) {
     defer sched.Notify()
     defer sched.JobLocker.Unlock()
     sched.JobLocker.Lock()
-    removeListJob(sched.jobQueue, jobId)
+    removeListJob(sched.procQueue, jobId)
     job, _ := sched.driver.Get(jobId)
     sched.DecrStatProc(job)
     job.Status = JOB_STATUS_READY
@@ -424,7 +424,7 @@ func (sched *Sched) loadJobQueue() {
         if runAt + job.Timeout < current {
             updateQueue = append(updateQueue, job)
         } else {
-            sched.jobQueue.PushBack(job)
+            sched.procQueue.PushBack(job)
             sched.IncrStatProc(job)
         }
     }
