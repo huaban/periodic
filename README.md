@@ -4,9 +4,25 @@ Periodic task system
 Install
 -------
 
-    $ go get -v github.com/Lupino/periodic/cmd/periodic
-    $ $GOPATH/bin/periodic -h # show the help
+### Install from binary
 
+    # for linux64
+    wget -O /usr/local/bin/periodic https://github.com/Lupino/periodic/releases/download/0.1.1/periodic
+
+    # for Mac osx
+    wget -O /usr/local/bin/periodic https://github.com/Lupino/periodic/releases/download/0.1.1/periodic-osx
+
+    # then
+    chown +x /usr/local/bin/periodic
+
+
+### install from source
+
+    $ go get -v github.com/Lupino/periodic/cmd/periodic
+
+### Show help
+
+    $ periodic -h
     NAME:
        periodic - Periodic task system
 
@@ -40,7 +56,7 @@ Quick start
 
 ### Start periodic server
 
-    $ $GOPATH/bin/periodic -d
+    $ periodic -d
 
 ### A worker to ls a dirctory every five second.
 
@@ -53,12 +69,12 @@ Quick start
 
     $ chmod +x ls-every-five-second.sh
 
-    $ $GOPATH/bin/periodic run -f ls5 --exec `pwd`/ls-every-five-second.sh
+    $ periodic run -f ls5 --exec `pwd`/ls-every-five-second.sh
 
 
-### Submit job
+### Submit a job
 
-    $ $GOPATH/bin/periodic submit -f ls5 -n /tmp/
+    $ periodic submit -f ls5 -n /tmp/
 
 
 Depends
