@@ -1,6 +1,6 @@
 package periodic
 
-type Counter uint
+type Counter int
 
 func (c *Counter) Incr() {
     *c = *c + 1
@@ -9,6 +9,9 @@ func (c *Counter) Incr() {
 
 func (c *Counter) Decr() {
     *c = *c - 1
+    if *c < 0 {
+        *c = 0
+    }
 }
 
 
