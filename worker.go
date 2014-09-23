@@ -6,6 +6,7 @@ import (
     "container/list"
     "strconv"
     "bytes"
+    "github.com/Lupino/periodic/driver"
 )
 
 
@@ -34,7 +35,7 @@ func (worker *Worker) IsAlive() bool {
 }
 
 
-func (worker *Worker) HandleDo(msgId int64, job Job) (err error){
+func (worker *Worker) HandleDo(msgId int64, job driver.Job) (err error){
     worker.jobQueue.PushBack(job)
     buf := bytes.NewBuffer(nil)
     buf.WriteString(strconv.FormatInt(msgId, 10))
@@ -195,7 +196,7 @@ func (worker *Worker) Close() {
     worker.sched.grabQueue.RemoveWorker(worker)
     worker.alive = false
     for e := worker.jobQueue.Front(); e != nil; e = e.Next() {
-        worker.sched.Fail(e.Value.(Job).Id)
+        worker.sched.Fail(e.Value.(driver.Job).Id)
     }
     for _, Func := range worker.Funcs {
         worker.sched.DecrStatFunc(Func)

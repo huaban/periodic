@@ -6,7 +6,9 @@ import (
     "time"
     "runtime"
     "os/signal"
-    "github.com/Lupino/periodic/drivers"
+    "github.com/Lupino/periodic/driver"
+    "github.com/Lupino/periodic/driver/redis"
+    "github.com/Lupino/periodic/driver/leveldb"
     "github.com/Lupino/periodic"
     "github.com/Lupino/periodic/cmd/periodic/subcmd"
     "github.com/codegangsta/cli"
@@ -95,7 +97,7 @@ func main() {
                 },
             },
             Action: func(c *cli.Context) {
-                var job = periodic.Job{
+                var job = driver.Job{
                     Name: c.String("n"),
                     Func: c.String("f"),
                     Args: c.String("args"),
@@ -162,11 +164,11 @@ func main() {
     }
     app.Action = func(c *cli.Context) {
         if c.Bool("d") {
-            var st periodic.StoreDriver
+            var st driver.StoreDriver
             if c.String("driver") == "redis" {
-                st = drivers.NewRedisDriver(c.String("redis"))
+                st = redis.NewRedisDriver(c.String("redis"))
             } else {
-                st = drivers.NewLevelDBDriver(c.String("dbpath"))
+                st = leveldb.NewLevelDBDriver(c.String("dbpath"))
             }
             runtime.GOMAXPROCS(c.Int("cpus"))
             timeout := time.Duration(c.Int("timeout"))

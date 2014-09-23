@@ -1,4 +1,4 @@
-package drivers
+package leveldb
 
 
 import (
@@ -7,7 +7,7 @@ import (
     "log"
     "errors"
     "strconv"
-    "github.com/Lupino/periodic"
+    "github.com/Lupino/periodic/driver"
     "github.com/syndtr/goleveldb/leveldb"
     "github.com/syndtr/goleveldb/leveldb/util"
     "github.com/syndtr/goleveldb/leveldb/iterator"
@@ -44,7 +44,7 @@ func NewLevelDBDriver(dbpath string) LevelDBDriver {
 }
 
 
-func (l LevelDBDriver) Save(job *periodic.Job) (err error) {
+func (l LevelDBDriver) Save(job *driver.Job) (err error) {
     batch := new(leveldb.Batch)
     if job.Id > 0 {
         old, e := l.Get(job.Id)
@@ -74,7 +74,7 @@ func (l LevelDBDriver) Save(job *periodic.Job) (err error) {
 
 
 func (l LevelDBDriver) Delete(jobId int64) (err error) {
-    var job periodic.Job
+    var job driver.Job
     batch := new(leveldb.Batch)
     job, err = l.Get(jobId)
     if err != nil {
@@ -87,19 +87,19 @@ func (l LevelDBDriver) Delete(jobId int64) (err error) {
 }
 
 
-func (l LevelDBDriver) Get(jobId int64) (job periodic.Job, err error) {
+func (l LevelDBDriver) Get(jobId int64) (job driver.Job, err error) {
     var data []byte
     var key = PRE_JOB + strconv.FormatInt(jobId, 10)
     data, err = l.db.Get([]byte(key), nil)
     if err != nil {
         return
     }
-    job, err = periodic.NewJob(data)
+    job, err = driver.NewJob(data)
     return
 }
 
 
-func (l LevelDBDriver) GetOne(Func, name string) (job periodic.Job, err error) {
+func (l LevelDBDriver) GetOne(Func, name string) (job driver.Job, err error) {
     var data []byte
     var key = PRE_JOB_FUNC + Func + ":" + name
     data, err = l.db.Get([]byte(key), nil)
@@ -111,12 +111,12 @@ func (l LevelDBDriver) GetOne(Func, name string) (job periodic.Job, err error) {
     if err != nil {
         return
     }
-    job, err = periodic.NewJob(data)
+    job, err = driver.NewJob(data)
     return
 }
 
 
-func (l LevelDBDriver) NewIterator(Func []byte) periodic.JobIterator {
+func (l LevelDBDriver) NewIterator(Func []byte) driver.JobIterator {
     var prefix []byte
     if Func == nil {
         prefix = []byte(PRE_JOB)
@@ -150,10 +150,10 @@ func (iter *LevelDBIterator) Next() bool {
 }
 
 
-func (iter *LevelDBIterator) Value() (job periodic.Job) {
+func (iter *LevelDBIterator) Value() (job driver.Job) {
     data := iter.iter.Value()
     if iter.Func == nil {
-        job, _ = periodic.NewJob(data)
+        job, _ = driver.NewJob(data)
         return
     }
     jobId, _ := strconv.ParseInt(string(data), 10, 64)

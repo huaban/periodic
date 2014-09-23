@@ -5,6 +5,7 @@ import (
     "net"
     "strings"
     "github.com/Lupino/periodic"
+    "github.com/Lupino/periodic/driver"
     "fmt"
     "log"
     "bytes"
@@ -59,7 +60,7 @@ func handleWorker(conn periodic.Conn, Func, cmd string) (err error) {
     }
 
     var payload []byte
-    var job periodic.Job
+    var job driver.Job
     var jobHandle []byte
     for {
         buf = bytes.NewBuffer(nil)
@@ -124,13 +125,13 @@ func handleWorker(conn periodic.Conn, Func, cmd string) (err error) {
 }
 
 
-func extraJob(payload []byte) (job periodic.Job, jobHandle []byte, err error) {
+func extraJob(payload []byte) (job driver.Job, jobHandle []byte, err error) {
     parts := bytes.SplitN(payload, periodic.NULL_CHAR, 3)
     if len(parts) != 3 {
         err = errors.New("Invalid payload " + string(payload))
         return
     }
-    job, err = periodic.NewJob(parts[2])
+    job, err = driver.NewJob(parts[2])
     jobHandle = parts[1]
     return
 }

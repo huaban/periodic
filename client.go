@@ -6,12 +6,13 @@ import (
     "bytes"
     "strconv"
     "encoding/json"
+    "github.com/Lupino/periodic/driver"
 )
 
 
 type Client struct {
     sched *Sched
-    conn Conn
+    conn  Conn
 }
 
 
@@ -84,24 +85,24 @@ func (client *Client) HandleCommand(msgId int64, cmd Command) (err error) {
 
 
 func (client *Client) HandleSubmitJob(msgId int64, payload []byte) (err error) {
-    var job Job
+    var job driver.Job
     var e error
     var conn = client.conn
     var sched = client.sched
     defer sched.JobLocker.Unlock()
     sched.JobLocker.Lock()
-    job, e = NewJob(payload)
+    job, e = driver.NewJob(payload)
     if e != nil {
         err = conn.Send([]byte(e.Error()))
         return
     }
     is_new := true
     changed := false
-    job.Status = JOB_STATUS_READY
+    job.Status = driver.JOB_STATUS_READY
     oldJob, e := sched.driver.GetOne(job.Func, job.Name)
     if e == nil && oldJob.Id > 0 {
         job.Id = oldJob.Id
-        if oldJob.Status == JOB_STATUS_PROC {
+        if oldJob.Status == driver.JOB_STATUS_PROC {
             sched.DecrStatProc(oldJob)
             changed = true
         }

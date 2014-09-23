@@ -1,4 +1,4 @@
-package drivers
+package redis
 
 
 import (
@@ -7,7 +7,7 @@ import (
     "errors"
     "strings"
     "strconv"
-    "github.com/Lupino/periodic"
+    "github.com/Lupino/periodic/driver"
     "github.com/garyburd/redigo/redis"
 )
 
@@ -31,7 +31,7 @@ func NewRedisDriver(server string) RedisDriver {
 }
 
 
-func (r RedisDriver) get(jobId int64) (job periodic.Job, err error) {
+func (r RedisDriver) get(jobId int64) (job driver.Job, err error) {
     var data []byte
     var conn = r.pool.Get()
     defer conn.Close()
@@ -40,12 +40,12 @@ func (r RedisDriver) get(jobId int64) (job periodic.Job, err error) {
     if err != nil {
         return
     }
-    job, err = periodic.NewJob(data)
+    job, err = driver.NewJob(data)
     return
 }
 
 
-func (r RedisDriver) Save(job *periodic.Job) (err error) {
+func (r RedisDriver) Save(job *driver.Job) (err error) {
     var key string
     var prefix = REDIS_PREFIX + job.Func + ":"
     var conn = r.pool.Get()
@@ -105,13 +105,13 @@ func (r RedisDriver) Delete(jobId int64) (err error) {
 }
 
 
-func (r RedisDriver) Get(jobId int64) (job periodic.Job, err error) {
+func (r RedisDriver) Get(jobId int64) (job driver.Job, err error) {
     job, err = r.get(jobId)
     return
 }
 
 
-func (r RedisDriver) GetOne(Func string, jobName string) (job periodic.Job, err error) {
+func (r RedisDriver) GetOne(Func string, jobName string) (job driver.Job, err error) {
     var conn = r.pool.Get()
     defer conn.Close()
     jobId, _ := redis.Int64(conn.Do("ZSCORE", REDIS_PREFIX + Func + ":name", jobName))
@@ -122,11 +122,11 @@ func (r RedisDriver) GetOne(Func string, jobName string) (job periodic.Job, err 
 }
 
 
-func (r RedisDriver) NewIterator(Func []byte) periodic.JobIterator {
+func (r RedisDriver) NewIterator(Func []byte) driver.JobIterator {
     return &RedisIterator{
         Func: Func,
         cursor: 0,
-        cacheJob: make([]periodic.Job, 0),
+        cacheJob: make([]driver.Job, 0),
         start: 0,
         limit: 20,
         err: nil,
@@ -144,7 +144,7 @@ type RedisIterator struct {
     Func   []byte
     cursor int
     err    error
-    cacheJob []periodic.Job
+    cacheJob []driver.Job
     start  int
     limit  int
     r      RedisDriver
@@ -174,7 +174,7 @@ func (iter *RedisIterator) Next() bool {
         return false
     }
     var jobId int64
-    jobs := make([]periodic.Job, len(reply)/2)
+    jobs := make([]driver.Job, len(reply)/2)
     for k, v := range reply {
         if k % 2 == 1 {
             jobId, _ = strconv.ParseInt(string(v.([]byte)), 10, 0)
@@ -187,7 +187,7 @@ func (iter *RedisIterator) Next() bool {
 }
 
 
-func (iter *RedisIterator) Value() periodic.Job {
+func (iter *RedisIterator) Value() driver.Job {
     return iter.cacheJob[iter.cursor]
 }
 

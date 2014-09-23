@@ -8,6 +8,7 @@ import (
     "bytes"
     "strconv"
     "container/list"
+    "github.com/Lupino/periodic/driver"
 )
 
 
@@ -26,7 +27,7 @@ func sockCheck(sockFile string) {
 
 func removeListJob(l *list.List, jobId int64) {
     for e := l.Front(); e != nil; e = e.Next() {
-        if e.Value.(Job).Id == jobId {
+        if e.Value.(driver.Job).Id == jobId {
             l.Remove(e)
             break
         }

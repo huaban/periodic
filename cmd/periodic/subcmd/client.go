@@ -5,13 +5,14 @@ import (
     "net"
     "strings"
     "github.com/Lupino/periodic"
+    "github.com/Lupino/periodic/driver"
     "fmt"
     "log"
     "bytes"
 )
 
 
-func SubmitJob(entryPoint string, job periodic.Job) {
+func SubmitJob(entryPoint string, job driver.Job) {
     parts := strings.SplitN(entryPoint, "://", 2)
     c, err := net.Dial(parts[0], parts[1])
     if err != nil {
