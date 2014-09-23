@@ -178,6 +178,7 @@ func (sched *Sched) SubmitJob(grabItem GrabItem, job Job) bool {
     sched.driver.Save(&job)
     sched.IncrStatProc(job)
     sched.pushRevertPQ(job)
+    sched.NotifyRevertTimer()
     sched.procQueue.PushBack(job)
     sched.grabQueue.Remove(grabItem)
     return true
