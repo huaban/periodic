@@ -21,7 +21,7 @@ type Sched struct {
     revTimer   *time.Timer
     entryPoint string
     JobLocker  *sync.Mutex
-    Funcs      map[string]*FuncStat
+    stats      map[string]*FuncStat
     FuncLocker *sync.Mutex
     driver     driver.StoreDriver
     jobPQ      map[string]*PriorityQueue
@@ -43,7 +43,7 @@ func NewSched(entryPoint string, driver driver.StoreDriver, timeout time.Duratio
     sched.JobLocker = new(sync.Mutex)
     sched.PQLocker = new(sync.Mutex)
     sched.FuncLocker = new(sync.Mutex)
-    sched.Funcs = make(map[string]*FuncStat)
+    sched.stats = make(map[string]*FuncStat)
     sched.driver = driver
     sched.jobPQ = make(map[string]*PriorityQueue)
     sched.timeout = timeout
@@ -177,7 +177,7 @@ func (sched *Sched) lessItem() (lessItem *Item) {
     defer sched.PQLocker.Unlock()
     sched.PQLocker.Lock()
     maybeItem := make(map[string]*Item)
-    for Func, stat := range sched.Funcs {
+    for Func, stat := range sched.stats {
         if stat.Worker == 0 {
             continue
         }
@@ -342,10 +342,10 @@ func (sched *Sched) Fail(jobId int64) {
 func (sched *Sched) getFuncStat(Func string) *FuncStat {
     defer sched.FuncLocker.Unlock()
     sched.FuncLocker.Lock()
-    stat, ok := sched.Funcs[Func]
+    stat, ok := sched.stats[Func]
     if !ok {
         stat = new(FuncStat)
-        sched.Funcs[Func] = stat
+        sched.stats[Func] = stat
     }
     return stat
 }

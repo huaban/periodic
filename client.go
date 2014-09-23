@@ -129,7 +129,7 @@ func (client *Client) HandleSubmitJob(msgId int64, payload []byte) (err error) {
 
 
 func (client *Client) HandleStatus(msgId int64) (err error) {
-    data, _ := json.Marshal(client.sched.Funcs)
+    data, _ := json.Marshal(client.sched.stats)
     buf := bytes.NewBuffer(nil)
     buf.WriteString(strconv.FormatInt(msgId, 10))
     buf.Write(protocol.NULL_CHAR)
@@ -141,7 +141,7 @@ func (client *Client) HandleStatus(msgId int64) (err error) {
 
 func (client *Client) HandleDropFunc(msgId int64, payload []byte) (err error) {
     Func := string(payload)
-    stat, ok := client.sched.Funcs[Func]
+    stat, ok := client.sched.stats[Func]
     sched := client.sched
     defer sched.NotifyJobTimer()
     defer sched.JobLocker.Unlock()
@@ -160,7 +160,7 @@ func (client *Client) HandleDropFunc(msgId int64, payload []byte) (err error) {
         for _, jobId := range deleteJob {
             sched.driver.Delete(jobId)
         }
-        delete(client.sched.Funcs, Func)
+        delete(client.sched.stats, Func)
         delete(client.sched.jobPQ, Func)
     }
     err = client.HandleCommand(msgId, protocol.SUCCESS)
