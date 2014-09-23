@@ -12,7 +12,7 @@ import (
 
 
 type Sched struct {
-    timer      *time.Timer
+    jobTimer   *time.Timer
     grabQueue  *GrabQueue
     procQueue  *list.List
     revertPQ   PriorityQueue
@@ -49,7 +49,7 @@ type FuncStat struct {
 
 func NewSched(entryPoint string, driver StoreDriver, timeout time.Duration) *Sched {
     sched := new(Sched)
-    sched.timer = time.NewTimer(1 * time.Hour)
+    sched.jobTimer = time.NewTimer(1 * time.Hour)
     sched.revTimer = time.NewTimer(1 * time.Hour)
     sched.grabQueue = NewGrabQueue()
     sched.procQueue = list.New()
@@ -73,7 +73,7 @@ func (sched *Sched) Serve() {
         sockCheck(parts[1])
     }
     sched.loadJobQueue()
-    go sched.handle()
+    go sched.handleJobPQ()
     go sched.handleRevertPQ()
     listen, err := net.Listen(parts[0], parts[1])
     if err != nil {
@@ -95,7 +95,7 @@ func (sched *Sched) Serve() {
 
 
 func (sched *Sched) Notify() {
-    sched.timer.Reset(time.Millisecond)
+    sched.jobTimer.Reset(time.Millisecond)
 }
 
 
@@ -232,21 +232,21 @@ func (sched *Sched) lessItem() (lessItem *Item) {
 }
 
 
-func (sched *Sched) handle() {
+func (sched *Sched) handleJobPQ() {
     var current time.Time
     var timestamp int64
     for {
         if sched.grabQueue.Len() == 0 {
-            sched.timer.Reset(time.Minute)
-            current =<-sched.timer.C
+            sched.jobTimer.Reset(time.Minute)
+            current =<-sched.jobTimer.C
             continue
         }
 
         lessItem := sched.lessItem()
 
         if lessItem == nil {
-            sched.timer.Reset(time.Minute)
-            current =<-sched.timer.C
+            sched.jobTimer.Reset(time.Minute)
+            current =<-sched.jobTimer.C
             continue
         }
 
@@ -260,8 +260,8 @@ func (sched *Sched) handle() {
         timestamp = int64(time.Now().Unix())
 
         if schedJob.SchedAt > timestamp {
-            sched.timer.Reset(time.Second * time.Duration(schedJob.SchedAt - timestamp))
-            current =<-sched.timer.C
+            sched.jobTimer.Reset(time.Second * time.Duration(schedJob.SchedAt - timestamp))
+            current =<-sched.jobTimer.C
             timestamp = int64(current.Unix())
             if schedJob.SchedAt > timestamp {
                 sched.pushJobPQ(schedJob)
