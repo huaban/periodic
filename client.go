@@ -105,6 +105,7 @@ func (client *Client) HandleSubmitJob(msgId int64, payload []byte) (err error) {
         job.Id = oldJob.Id
         if oldJob.Status == driver.JOB_STATUS_PROC {
             sched.DecrStatProc(oldJob)
+            sched.removeRevertPQ(job)
             changed = true
         }
         is_new = false
