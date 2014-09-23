@@ -34,8 +34,8 @@ func main() {
         },
         cli.StringFlag{
             Name: "driver",
-            Value: "leveldb",
-            Usage: "The driver [leveldb, redis]",
+            Value: "memstore",
+            Usage: "The driver [memstore, leveldb, redis]",
         },
         cli.StringFlag{
             Name: "dbpath",
@@ -91,9 +91,9 @@ func main() {
                     Usage: "job running timeout",
                 },
                 cli.IntFlag{
-                    Name: "periodiced_later",
+                    Name: "sched_later",
                     Value: 0,
-                    Usage: "job periodiced_later",
+                    Usage: "job sched_later",
                 },
             },
             Action: func(c *cli.Context) {
@@ -107,7 +107,7 @@ func main() {
                     cli.ShowCommandHelp(c, "submit")
                     log.Fatal("Job name and func is require")
                 }
-                delay := c.Int("periodiced_later")
+                delay := c.Int("sched_later")
                 var now = time.Now()
                 job.SchedAt = int64(now.Unix()) + int64(delay)
                 subcmd.SubmitJob(c.GlobalString("H"), job)
@@ -164,15 +164,25 @@ func main() {
     }
     app.Action = func(c *cli.Context) {
         if c.Bool("d") {
-            var st driver.StoreDriver
-            if c.String("driver") == "redis" {
-                st = redis.NewRedisDriver(c.String("redis"))
-            } else {
-                st = leveldb.NewLevelDBDriver(c.String("dbpath"))
+            var store driver.StoreDriver
+            switch c.String("driver") {
+                case "memstore":
+                    store = driver.NewMemStroeDriver()
+                    break
+                case "redis":
+                    store = redis.NewRedisDriver(c.String("redis"))
+                    break
+                case "leveldb":
+                    store = leveldb.NewLevelDBDriver(c.String("dbpath"))
+                    break
+                default:
+                    store = driver.NewMemStroeDriver()
+                    break
             }
+
             runtime.GOMAXPROCS(c.Int("cpus"))
             timeout := time.Duration(c.Int("timeout"))
-            periodicd := periodic.NewSched(c.String("H"), st, timeout)
+            periodicd := periodic.NewSched(c.String("H"), store, timeout)
             go periodicd.Serve()
             s := make(chan os.Signal, 1)
             signal.Notify(s, os.Interrupt, os.Kill)
