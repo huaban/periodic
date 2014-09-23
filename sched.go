@@ -15,6 +15,8 @@ type Sched struct {
     timer      *time.Timer
     grabQueue  *GrabQueue
     procQueue  *list.List
+    revertPQ   PriorityQueue
+    revTimer   *time.Timer
     entryPoint string
     JobLocker  *sync.Mutex
     Funcs      map[string]*FuncStat
@@ -48,8 +50,11 @@ type FuncStat struct {
 func NewSched(entryPoint string, driver StoreDriver, timeout time.Duration) *Sched {
     sched := new(Sched)
     sched.timer = time.NewTimer(1 * time.Hour)
+    sched.revTimer = time.NewTimer(1 * time.Hour)
     sched.grabQueue = NewGrabQueue()
     sched.procQueue = list.New()
+    sched.revertPQ = make(PriorityQueue, 0)
+    heap.Init(&sched.revertPQ)
     sched.entryPoint = entryPoint
     sched.JobLocker = new(sync.Mutex)
     sched.PQLocker = new(sync.Mutex)
@@ -69,6 +74,7 @@ func (sched *Sched) Serve() {
     }
     sched.loadJobQueue()
     go sched.handle()
+    go sched.handleRevertPQ()
     listen, err := net.Listen(parts[0], parts[1])
     if err != nil {
         log.Fatal(err)
@@ -90,6 +96,11 @@ func (sched *Sched) Serve() {
 
 func (sched *Sched) Notify() {
     sched.timer.Reset(time.Millisecond)
+}
+
+
+func (sched *Sched) NotifyRevertTimer() {
+    sched.revTimer.Reset(time.Millisecond)
 }
 
 
@@ -126,46 +137,20 @@ func (sched *Sched) Done(jobId int64) {
         sched.driver.Delete(jobId)
         sched.DecrStatJob(job)
         sched.DecrStatProc(job)
+        sched.removeRevertPQ(job)
     }
     return
 }
 
 
 func (sched *Sched) isDoJob(job Job) bool {
-    now := time.Now()
-    current := int64(now.Unix())
-    ret := false
     for e := sched.procQueue.Front(); e != nil; e = e.Next() {
         chk := e.Value.(Job)
-        runAt := chk.RunAt
-        if runAt < chk.SchedAt {
-            runAt = chk.SchedAt
-        }
-        if chk.Timeout > 0 && runAt + chk.Timeout < current {
-            newJob, _ := sched.driver.Get(chk.Id)
-            if newJob.Status == JOB_STATUS_PROC {
-                sched.DecrStatProc(newJob)
-                newJob.Status = JOB_STATUS_READY
-                sched.driver.Save(&newJob)
-                sched.pushJobPQ(newJob)
-            }
-            sched.procQueue.Remove(e)
-            continue
-        }
         if chk.Id == job.Id {
-            old := e.Value.(Job)
-            runAt := old.RunAt
-            if runAt < old.SchedAt {
-                runAt = old.SchedAt
-            }
-            if old.Timeout > 0 && runAt + old.Timeout < current {
-                ret = false
-            } else {
-                ret = true
-            }
+            return true
         }
     }
-    return ret
+    return false
 }
 
 
@@ -192,6 +177,7 @@ func (sched *Sched) SubmitJob(grabItem GrabItem, job Job) bool {
     job.RunAt = current
     sched.driver.Save(&job)
     sched.IncrStatProc(job)
+    sched.pushRevertPQ(job)
     sched.procQueue.PushBack(job)
     sched.grabQueue.Remove(grabItem)
     return true
@@ -295,6 +281,54 @@ func (sched *Sched) handle() {
 }
 
 
+func (sched *Sched) handleRevertPQ() {
+    var current time.Time
+    var timestamp int64
+    for {
+        if sched.revertPQ.Len() == 0 {
+            sched.revTimer.Reset(time.Minute)
+            current =<-sched.revTimer.C
+            continue
+        }
+
+        sched.PQLocker.Lock()
+        item := heap.Pop(&sched.revertPQ).(*Item)
+        sched.PQLocker.Unlock()
+
+        if item == nil {
+            sched.revTimer.Reset(time.Minute)
+            current =<-sched.revTimer.C
+            continue
+        }
+
+        revertJob, err := sched.driver.Get(item.value)
+
+        if err != nil {
+            log.Printf("Error: Get job: %d %v\n", item.value, err)
+            continue
+        }
+
+        timestamp = int64(time.Now().Unix())
+
+        if item.priority > timestamp {
+            sched.revTimer.Reset(time.Second * time.Duration(item.priority - timestamp))
+            current =<-sched.revTimer.C
+            timestamp = int64(current.Unix())
+            if item.priority > timestamp {
+                sched.pushRevertPQ(revertJob)
+                continue
+            }
+        }
+
+        sched.DecrStatProc(revertJob)
+        revertJob.Status = JOB_STATUS_READY
+        sched.driver.Save(&revertJob)
+        sched.pushJobPQ(revertJob)
+        removeListJob(sched.procQueue, revertJob.Id)
+    }
+}
+
+
 func (sched *Sched) Fail(jobId int64) {
     defer sched.Notify()
     defer sched.JobLocker.Unlock()
@@ -302,6 +336,7 @@ func (sched *Sched) Fail(jobId int64) {
     removeListJob(sched.procQueue, jobId)
     job, _ := sched.driver.Get(jobId)
     sched.DecrStatProc(job)
+    sched.removeRevertPQ(job)
     job.Status = JOB_STATUS_READY
     sched.driver.Save(&job)
     sched.pushJobPQ(job)
@@ -368,6 +403,7 @@ func (sched *Sched) SchedLater(jobId int64, delay int64) {
     removeListJob(sched.procQueue, jobId)
     job, _ := sched.driver.Get(jobId)
     sched.DecrStatProc(job)
+    sched.removeRevertPQ(job)
     job.Status = JOB_STATUS_READY
     var now = time.Now()
     job.SchedAt = int64(now.Unix()) + delay
@@ -399,6 +435,37 @@ func (sched *Sched) pushJobPQ(job Job) bool {
 }
 
 
+func (sched *Sched) pushRevertPQ(job Job) {
+    defer sched.PQLocker.Unlock()
+    sched.PQLocker.Lock()
+    if job.Status == JOB_STATUS_PROC && job.Timeout > 0 {
+        runAt := job.RunAt
+        if runAt == 0 {
+            runAt = job.SchedAt
+        }
+        item := &Item{
+            value: job.Id,
+            priority: runAt + job.Timeout,
+        }
+        heap.Push(&sched.revertPQ, item)
+    }
+}
+
+
+func (sched *Sched) removeRevertPQ(job Job) {
+    defer sched.PQLocker.Unlock()
+    sched.PQLocker.Lock()
+    if job.Status == JOB_STATUS_PROC && job.Timeout > 0 {
+        for _, item := range sched.revertPQ {
+            if item.value == job.Id {
+                heap.Remove(&sched.revertPQ, item.index)
+                break
+            }
+        }
+    }
+}
+
+
 func (sched *Sched) loadJobQueue() {
     updateQueue := make([]Job, 0)
     removeQueue := make([]Job, 0)
@@ -426,6 +493,7 @@ func (sched *Sched) loadJobQueue() {
         } else {
             sched.procQueue.PushBack(job)
             sched.IncrStatProc(job)
+            sched.pushRevertPQ(job)
         }
     }
 
