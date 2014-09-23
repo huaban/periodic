@@ -25,6 +25,7 @@ type Sched struct {
     jobPQ      map[string]*PriorityQueue
     PQLocker   *sync.Mutex
     timeout    time.Duration
+    alive      bool
 }
 
 
@@ -63,6 +64,7 @@ func NewSched(entryPoint string, driver StoreDriver, timeout time.Duration) *Sch
     sched.driver = driver
     sched.jobPQ = make(map[string]*PriorityQueue)
     sched.timeout = timeout
+    sched.alive = true
     return sched
 }
 
@@ -82,6 +84,9 @@ func (sched *Sched) Serve() {
     defer listen.Close()
     log.Printf("Periodic task system started on %s\n", sched.entryPoint)
     for {
+        if !sched.alive {
+            break
+        }
         conn, err := listen.Accept()
         if err != nil {
             log.Fatal(err)
@@ -237,6 +242,9 @@ func (sched *Sched) handleJobPQ() {
     var current time.Time
     var timestamp int64
     for {
+        if !sched.alive {
+            break
+        }
         if sched.grabQueue.Len() == 0 {
             sched.jobTimer.Reset(time.Minute)
             current =<-sched.jobTimer.C
@@ -286,6 +294,9 @@ func (sched *Sched) handleRevertPQ() {
     var current time.Time
     var timestamp int64
     for {
+        if !sched.alive {
+            break
+        }
         if sched.revertPQ.Len() == 0 {
             sched.revTimer.Reset(time.Minute)
             current =<-sched.revTimer.C
@@ -512,4 +523,7 @@ func (sched *Sched) loadJobQueue() {
 
 
 func (sched *Sched) Close() {
+    sched.alive = false
+    sched.driver.Close()
+    log.Printf("Periodic task system shutdown\n")
 }

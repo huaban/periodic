@@ -175,12 +175,7 @@ func main() {
             s := make(chan os.Signal, 1)
             signal.Notify(s, os.Interrupt, os.Kill)
             <-s
-            if c.String("driver") == "leveldb" {
-                err := st.Close()
-                if err != nil {
-                    log.Fatal(err)
-                }
-            }
+            periodicd.Close()
         } else {
             cli.ShowAppHelp(c)
         }
