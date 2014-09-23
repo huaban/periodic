@@ -7,10 +7,10 @@ Install
 ### Install from binary
 
     # for linux64
-    wget -O /usr/local/bin/periodic https://github.com/Lupino/periodic/releases/download/0.1.1/periodic
+    wget -O /usr/local/bin/periodic https://github.com/Lupino/periodic/releases/download/0.1.2/periodic
 
     # for Mac osx
-    wget -O /usr/local/bin/periodic https://github.com/Lupino/periodic/releases/download/0.1.1/periodic-osx
+    wget -O /usr/local/bin/periodic https://github.com/Lupino/periodic/releases/download/0.1.2/periodic-osx
 
     # then
     chown +x /usr/local/bin/periodic
@@ -30,7 +30,7 @@ Install
        periodic [global options] command [command options] [arguments...]
 
     VERSION:
-       0.1.1
+       0.1.2
 
     COMMANDS:
        status   Show status
