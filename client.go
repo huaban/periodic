@@ -119,7 +119,7 @@ func (client *Client) HandleSubmitJob(msgId int64, payload []byte) (err error) {
     if is_new || changed {
         sched.pushJobPQ(job)
     }
-    sched.Notify()
+    sched.NotifyJobTimer()
     err = client.HandleCommand(msgId, SUCCESS)
     return
 }
@@ -140,7 +140,7 @@ func (client *Client) HandleDropFunc(msgId int64, payload []byte) (err error) {
     Func := string(payload)
     stat, ok := client.sched.Funcs[Func]
     sched := client.sched
-    defer sched.Notify()
+    defer sched.NotifyJobTimer()
     defer sched.JobLocker.Unlock()
     sched.JobLocker.Lock()
     if ok && stat.Worker == 0 {

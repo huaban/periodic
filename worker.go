@@ -109,7 +109,7 @@ func (worker *Worker) HandleGrabJob(msgId int64) (err error){
         msgId: msgId,
     }
     worker.sched.grabQueue.Push(item)
-    worker.sched.Notify()
+    worker.sched.NotifyJobTimer()
     return nil
 }
 
@@ -190,7 +190,7 @@ func (worker *Worker) Handle() {
 
 
 func (worker *Worker) Close() {
-    defer worker.sched.Notify()
+    defer worker.sched.NotifyJobTimer()
     defer worker.conn.Close()
     worker.sched.grabQueue.RemoveWorker(worker)
     worker.alive = false
