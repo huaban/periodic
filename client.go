@@ -7,6 +7,7 @@ import (
     "strconv"
     "encoding/json"
     "github.com/Lupino/periodic/driver"
+    "github.com/Lupino/periodic/protocol"
 )
 
 
@@ -28,7 +29,7 @@ func (client *Client) Handle() {
     var payload []byte
     var err error
     var msgId int64
-    var cmd Command
+    var cmd protocol.Command
     var conn = client.conn
     defer func() {
         if x := recover(); x != nil {
@@ -45,23 +46,23 @@ func (client *Client) Handle() {
             return
         }
 
-        msgId, cmd, payload = ParseCommand(payload)
+        msgId, cmd, payload = protocol.ParseCommand(payload)
 
         switch cmd {
-        case SUBMIT_JOB:
+        case protocol.SUBMIT_JOB:
             err = client.HandleSubmitJob(msgId, payload)
             break
-        case STATUS:
+        case protocol.STATUS:
             err = client.HandleStatus(msgId)
             break
-        case PING:
-            err = client.HandleCommand(msgId, PONG)
+        case protocol.PING:
+            err = client.HandleCommand(msgId, protocol.PONG)
             break
-        case DROP_FUNC:
+        case protocol.DROP_FUNC:
             err = client.HandleDropFunc(msgId, payload)
             break
         default:
-            err = client.HandleCommand(msgId, UNKNOWN)
+            err = client.HandleCommand(msgId, protocol.UNKNOWN)
             break
         }
         if err != nil {
@@ -74,10 +75,10 @@ func (client *Client) Handle() {
 }
 
 
-func (client *Client) HandleCommand(msgId int64, cmd Command) (err error) {
+func (client *Client) HandleCommand(msgId int64, cmd protocol.Command) (err error) {
     buf := bytes.NewBuffer(nil)
     buf.WriteString(strconv.FormatInt(msgId, 10))
-    buf.Write(NULL_CHAR)
+    buf.Write(protocol.NULL_CHAR)
     buf.Write(cmd.Bytes())
     err = client.conn.Send(buf.Bytes())
     return
@@ -121,7 +122,7 @@ func (client *Client) HandleSubmitJob(msgId int64, payload []byte) (err error) {
         sched.pushJobPQ(job)
     }
     sched.NotifyJobTimer()
-    err = client.HandleCommand(msgId, SUCCESS)
+    err = client.HandleCommand(msgId, protocol.SUCCESS)
     return
 }
 
@@ -130,7 +131,7 @@ func (client *Client) HandleStatus(msgId int64) (err error) {
     data, _ := json.Marshal(client.sched.Funcs)
     buf := bytes.NewBuffer(nil)
     buf.WriteString(strconv.FormatInt(msgId, 10))
-    buf.Write(NULL_CHAR)
+    buf.Write(protocol.NULL_CHAR)
     buf.Write(data)
     err = client.conn.Send(buf.Bytes())
     return
@@ -161,6 +162,6 @@ func (client *Client) HandleDropFunc(msgId int64, payload []byte) (err error) {
         delete(client.sched.Funcs, Func)
         delete(client.sched.jobPQ, Func)
     }
-    err = client.HandleCommand(msgId, SUCCESS)
+    err = client.HandleCommand(msgId, protocol.SUCCESS)
     return
 }

@@ -4,9 +4,6 @@ import (
     "os"
     "net"
     "log"
-    "fmt"
-    "bytes"
-    "strconv"
     "container/list"
     "github.com/Lupino/periodic/driver"
 )
@@ -32,19 +29,4 @@ func removeListJob(l *list.List, jobId int64) {
             break
         }
     }
-}
-
-
-func ParseCommand(payload []byte) (msgId int64, cmd Command, data []byte) {
-    parts := bytes.SplitN(payload, NULL_CHAR, 3)
-    if len(parts) == 1 {
-        err := fmt.Sprint("ParseCommand InvalId %v\n", payload)
-        panic(err)
-    }
-    msgId, _ = strconv.ParseInt(string(parts[0]), 10, 0)
-    cmd = Command(parts[1][0])
-    if len(parts) == 3 {
-        data = parts[2]
-    }
-    return
 }

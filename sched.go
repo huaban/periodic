@@ -9,6 +9,7 @@ import (
     "container/list"
     "container/heap"
     "github.com/Lupino/periodic/driver"
+    "github.com/Lupino/periodic/protocol"
 )
 
 
@@ -116,12 +117,12 @@ func (sched *Sched) HandleConnection(conn net.Conn) {
     if err != nil {
         return
     }
-    switch ClientType(payload[0]) {
-    case TYPE_CLIENT:
+    switch protocol.ClientType(payload[0]) {
+    case protocol.TYPE_CLIENT:
         client := NewClient(sched, c)
         go client.Handle()
         break
-    case TYPE_WORKER:
+    case protocol.TYPE_WORKER:
         worker := NewWorker(sched, c)
         go worker.Handle()
         break

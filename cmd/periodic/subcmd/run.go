@@ -6,6 +6,7 @@ import (
     "strings"
     "github.com/Lupino/periodic"
     "github.com/Lupino/periodic/driver"
+    "github.com/Lupino/periodic/protocol"
     "fmt"
     "log"
     "bytes"
@@ -43,16 +44,16 @@ func Run(entryPoint, Func, cmd string) {
 
 
 func handleWorker(conn periodic.Conn, Func, cmd string) (err error) {
-    err = conn.Send(periodic.TYPE_WORKER.Bytes())
+    err = conn.Send(protocol.TYPE_WORKER.Bytes())
     if err != nil {
         return
     }
     var msgId = []byte("100")
     buf := bytes.NewBuffer(nil)
     buf.Write(msgId)
-    buf.Write(periodic.NULL_CHAR)
-    buf.WriteByte(byte(periodic.CAN_DO))
-    buf.Write(periodic.NULL_CHAR)
+    buf.Write(protocol.NULL_CHAR)
+    buf.WriteByte(byte(protocol.CAN_DO))
+    buf.Write(protocol.NULL_CHAR)
     buf.WriteString(Func)
     err = conn.Send(buf.Bytes())
     if err != nil {
@@ -65,8 +66,8 @@ func handleWorker(conn periodic.Conn, Func, cmd string) (err error) {
     for {
         buf = bytes.NewBuffer(nil)
         buf.Write(msgId)
-        buf.Write(periodic.NULL_CHAR)
-        buf.Write(periodic.GRAB_JOB.Bytes())
+        buf.Write(protocol.NULL_CHAR)
+        buf.Write(protocol.GRAB_JOB.Bytes())
         err = conn.Send(buf.Bytes())
         if err != nil {
             return
@@ -103,18 +104,18 @@ func handleWorker(conn periodic.Conn, Func, cmd string) (err error) {
         }
         buf = bytes.NewBuffer(nil)
         buf.Write(msgId)
-        buf.Write(periodic.NULL_CHAR)
+        buf.Write(protocol.NULL_CHAR)
         if err != nil || fail {
-            buf.WriteByte(byte(periodic.JOB_FAIL))
+            buf.WriteByte(byte(protocol.JOB_FAIL))
         } else if schedLater > 0 {
-            buf.WriteByte(byte(periodic.SCHED_LATER))
+            buf.WriteByte(byte(protocol.SCHED_LATER))
         } else {
-            buf.WriteByte(byte(periodic.JOB_DONE))
+            buf.WriteByte(byte(protocol.JOB_DONE))
         }
-        buf.Write(periodic.NULL_CHAR)
+        buf.Write(protocol.NULL_CHAR)
         buf.Write(jobHandle)
         if schedLater > 0 {
-            buf.Write(periodic.NULL_CHAR)
+            buf.Write(protocol.NULL_CHAR)
             buf.WriteString(strconv.Itoa(schedLater))
         }
         err = conn.Send(buf.Bytes())
@@ -126,7 +127,7 @@ func handleWorker(conn periodic.Conn, Func, cmd string) (err error) {
 
 
 func extraJob(payload []byte) (job driver.Job, jobHandle []byte, err error) {
-    parts := bytes.SplitN(payload, periodic.NULL_CHAR, 3)
+    parts := bytes.SplitN(payload, protocol.NULL_CHAR, 3)
     if len(parts) != 3 {
         err = errors.New("Invalid payload " + string(payload))
         return

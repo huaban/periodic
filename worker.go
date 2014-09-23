@@ -7,6 +7,7 @@ import (
     "strconv"
     "bytes"
     "github.com/Lupino/periodic/driver"
+    "github.com/Lupino/periodic/protocol"
 )
 
 
@@ -39,9 +40,9 @@ func (worker *Worker) HandleDo(msgId int64, job driver.Job) (err error){
     worker.jobQueue.PushBack(job)
     buf := bytes.NewBuffer(nil)
     buf.WriteString(strconv.FormatInt(msgId, 10))
-    buf.Write(NULL_CHAR)
+    buf.Write(protocol.NULL_CHAR)
     buf.WriteString(strconv.FormatInt(job.Id, 10))
-    buf.Write(NULL_CHAR)
+    buf.Write(protocol.NULL_CHAR)
     buf.Write(job.Bytes())
     err = worker.conn.Send(buf.Bytes())
     return
@@ -87,10 +88,10 @@ func (worker *Worker) HandleFail(jobId int64) (err error) {
 }
 
 
-func (worker *Worker) HandleCommand(msgId int64, cmd Command) (err error) {
+func (worker *Worker) HandleCommand(msgId int64, cmd protocol.Command) (err error) {
     buf := bytes.NewBuffer(nil)
     buf.WriteString(strconv.FormatInt(msgId, 10))
-    buf.Write(NULL_CHAR)
+    buf.Write(protocol.NULL_CHAR)
     buf.Write(cmd.Bytes())
     err = worker.conn.Send(buf.Bytes())
     return
@@ -120,7 +121,7 @@ func (worker *Worker) Handle() {
     var err error
     var conn = worker.conn
     var msgId int64
-    var cmd Command
+    var cmd protocol.Command
     defer func() {
         if x := recover(); x != nil {
             log.Printf("[Worker] painc: %v\n", x)
@@ -136,22 +137,22 @@ func (worker *Worker) Handle() {
             break
         }
 
-        msgId, cmd, payload = ParseCommand(payload)
+        msgId, cmd, payload = protocol.ParseCommand(payload)
 
         switch cmd {
-        case GRAB_JOB:
+        case protocol.GRAB_JOB:
             err = worker.HandleGrabJob(msgId)
             break
-        case JOB_DONE:
+        case protocol.JOB_DONE:
             jobId, _ := strconv.ParseInt(string(payload), 10, 0)
             err = worker.HandleDone(jobId)
             break
-        case JOB_FAIL:
+        case protocol.JOB_FAIL:
             jobId, _ := strconv.ParseInt(string(payload), 10, 0)
             err = worker.HandleFail(jobId)
             break
-        case SCHED_LATER:
-            parts := bytes.SplitN(payload, NULL_CHAR, 2)
+        case protocol.SCHED_LATER:
+            parts := bytes.SplitN(payload, protocol.NULL_CHAR, 2)
             if len(parts) != 2 {
                 log.Printf("Error: invalid format.")
                 break
@@ -160,20 +161,20 @@ func (worker *Worker) Handle() {
             delay, _ := strconv.ParseInt(string(parts[1]), 10, 0)
             err = worker.HandleSchedLater(jobId, delay)
             break
-        case SLEEP:
-            err = worker.HandleCommand(msgId, NOOP)
+        case protocol.SLEEP:
+            err = worker.HandleCommand(msgId, protocol.NOOP)
             break
-        case PING:
-            err = worker.HandleCommand(msgId, PONG)
+        case protocol.PING:
+            err = worker.HandleCommand(msgId, protocol.PONG)
             break
-        case CAN_DO:
+        case protocol.CAN_DO:
             err = worker.HandleCanDo(string(payload))
             break
-        case CANT_DO:
+        case protocol.CANT_DO:
             err = worker.HandleCanNoDo(string(payload))
             break
         default:
-            err = worker.HandleCommand(msgId, UNKNOWN)
+            err = worker.HandleCommand(msgId, protocol.UNKNOWN)
             break
         }
         if err != nil {

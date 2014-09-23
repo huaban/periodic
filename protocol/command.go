@@ -1,12 +1,36 @@
-package periodic
+package protocol
 
 import (
     "bytes"
     "strconv"
 )
 
-
 type Command int
+
+const (
+    NOOP Command = iota // server
+    // for job
+    GRAB_JOB    // client
+    SCHED_LATER // client
+    JOB_DONE    // client
+    JOB_FAIL    // client
+    WAIT_JOB    // server
+    NO_JOB      // server
+    // for func
+    CAN_DO      // client
+    CANT_DO     // client
+    // for test
+    PING        // client
+    PONG        // server
+    // other
+    SLEEP       // client
+    UNKNOWN     // server
+    // client command
+    SUBMIT_JOB  // client
+    STATUS      // client
+    DROP_FUNC   // client
+    SUCCESS     // server
+)
 
 
 func (c Command) Bytes() []byte {
@@ -55,57 +79,3 @@ func (c Command) String() string {
     }
     panic("Unknow Command " + strconv.Itoa(int(c)))
 }
-
-
-const (
-    NOOP Command = iota // server
-    // for job
-    GRAB_JOB    // client
-    SCHED_LATER // client
-    JOB_DONE    // client
-    JOB_FAIL    // client
-    WAIT_JOB    // server
-    NO_JOB      // server
-    // for func
-    CAN_DO      // client
-    CANT_DO     // client
-    // for test
-    PING        // client
-    PONG        // server
-    // other
-    SLEEP       // client
-    UNKNOWN     // server
-    // client command
-    SUBMIT_JOB  // client
-    STATUS      // client
-    DROP_FUNC   // client
-    SUCCESS     // server
-)
-
-type ClientType int
-
-
-func (c ClientType) Bytes() []byte {
-    buf := bytes.NewBuffer(nil)
-    buf.WriteByte(byte(c))
-    return buf.Bytes()
-}
-
-
-func (c ClientType) String() string {
-    switch c {
-        case 1:
-            return "TYPE_CLIENT"
-        case 2:
-            return "TYPE_WORKER"
-    }
-    panic("Unknow ClientType " + strconv.Itoa(int(c)))
-}
-
-const (
-    TYPE_CLIENT ClientType = iota + 1
-    TYPE_WORKER
-)
-
-
-var NULL_CHAR = []byte("\x00\x01")
