@@ -117,6 +117,7 @@ func (sched *Sched) HandleConnection(conn net.Conn) {
 
 func (sched *Sched) Done(jobId int64) {
     defer sched.NotifyJobTimer()
+    defer sched.NotifyRevertTimer()
     defer sched.JobLocker.Unlock()
     sched.JobLocker.Lock()
     removeListJob(sched.procQueue, jobId)
@@ -326,6 +327,7 @@ func (sched *Sched) handleRevertPQ() {
 
 func (sched *Sched) Fail(jobId int64) {
     defer sched.NotifyJobTimer()
+    defer sched.NotifyRevertTimer()
     defer sched.JobLocker.Unlock()
     sched.JobLocker.Lock()
     removeListJob(sched.procQueue, jobId)
@@ -393,6 +395,7 @@ func (sched *Sched) DecrStatProc(job driver.Job) {
 
 func (sched *Sched) SchedLater(jobId int64, delay int64) {
     defer sched.NotifyJobTimer()
+    defer sched.NotifyRevertTimer()
     defer sched.JobLocker.Unlock()
     sched.JobLocker.Lock()
     removeListJob(sched.procQueue, jobId)
