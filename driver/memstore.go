@@ -37,7 +37,7 @@ func (m *MemStoreDriver) Save(job *Job) (err error) {
             m.nameIndex[job.Func + ":" + job.Name] = job.Id
         }
     } else {
-        m.lastId += 1
+        m.lastId ++
         job.Id = m.lastId
         m.nameIndex[job.Func + ":" + job.Name] = job.Id
     }
@@ -127,7 +127,7 @@ func (iter *MemIterator) Next() bool {
     if iter.err != nil {
         return false
     }
-    iter.cursor += 1
+    iter.cursor ++
     return true
 }
 
