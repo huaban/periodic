@@ -246,7 +246,7 @@ func (sched *Sched) handleJobPQ() {
         schedJob, err := sched.driver.Get(lessItem.value)
 
         if err != nil {
-            log.Printf("Error: Get job: %d %v\n", lessItem.value, err)
+            log.Printf("handleJobPQ error job: %d %v\n", lessItem.value, err)
             continue
         }
 
@@ -300,7 +300,7 @@ func (sched *Sched) handleRevertPQ() {
         revertJob, err := sched.driver.Get(item.value)
 
         if err != nil {
-            log.Printf("Error: Get job: %d %v\n", item.value, err)
+            log.Printf("handleRevertPQ error: job: %d %v\n", item.value, err)
             continue
         }
 
