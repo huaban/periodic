@@ -12,6 +12,7 @@ import (
     "github.com/Lupino/periodic"
     "github.com/Lupino/periodic/cmd/periodic/subcmd"
     "github.com/codegangsta/cli"
+    "runtime/pprof"
 )
 
 
@@ -56,6 +57,11 @@ func main() {
             Value: runtime.NumCPU(),
             Usage: "The runtime.GOMAXPROCS",
             EnvVar: "GOMAXPROCS",
+        },
+        cli.StringFlag{
+            Name: "cpuprofile",
+            Value: "",
+            Usage: "write cpu profile to file",
         },
     }
     app.Commands = []cli.Command{
@@ -164,6 +170,14 @@ func main() {
     }
     app.Action = func(c *cli.Context) {
         if c.Bool("d") {
+            if c.String("cpuprofile") != "" {
+                f, err := os.Create(c.String("cpuprofile"))
+                if err != nil {
+                    log.Fatal(err)
+                }
+                pprof.StartCPUProfile(f)
+                defer pprof.StopCPUProfile()
+            }
             var store driver.StoreDriver
             switch c.String("driver") {
                 case "memstore":
