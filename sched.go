@@ -28,6 +28,7 @@ type Sched struct {
     PQLocker   *sync.Mutex
     timeout    time.Duration
     alive      bool
+    cacheItem  *Item
 }
 
 
@@ -48,6 +49,7 @@ func NewSched(entryPoint string, driver driver.StoreDriver, timeout time.Duratio
     sched.jobPQ = make(map[string]*PriorityQueue)
     sched.timeout = timeout
     sched.alive = true
+    sched.cacheItem = nil
     return sched
 }
 
@@ -174,9 +176,19 @@ func (sched *Sched) SubmitJob(grabItem GrabItem, job driver.Job) bool {
 }
 
 
+func (sched *Sched) clearCacheItem() {
+    defer sched.PQLocker.Unlock()
+    sched.PQLocker.Lock()
+    sched.cacheItem = nil
+}
+
+
 func (sched *Sched) lessItem() (lessItem *Item) {
     defer sched.PQLocker.Unlock()
     sched.PQLocker.Lock()
+    if sched.cacheItem != nil {
+        return sched.cacheItem
+    }
     maybeItem := make(map[string]*Item)
     for Func, stat := range sched.stats {
         if stat.Worker == 0 {
@@ -218,6 +230,7 @@ func (sched *Sched) lessItem() (lessItem *Item) {
         pq := sched.jobPQ[Func]
         heap.Push(pq, item)
     }
+    sched.cacheItem = lessItem
     return
 }
 
@@ -246,6 +259,7 @@ func (sched *Sched) handleJobPQ() {
         schedJob, err := sched.driver.Get(lessItem.value)
 
         if err != nil {
+            sched.clearCacheItem()
             log.Printf("handleJobPQ error job: %d %v\n", lessItem.value, err)
             continue
         }
@@ -264,7 +278,9 @@ func (sched *Sched) handleJobPQ() {
 
         grabItem, err := sched.grabQueue.Get(schedJob.Func)
         if err == nil {
-            if !sched.SubmitJob(grabItem, schedJob) {
+            if sched.SubmitJob(grabItem, schedJob) {
+                sched.clearCacheItem()
+            } else {
                 sched.pushJobPQ(schedJob)
             }
         } else {
@@ -415,16 +431,26 @@ func (sched *Sched) pushJobPQ(job driver.Job) bool {
     defer sched.PQLocker.Unlock()
     sched.PQLocker.Lock()
     if job.Status == driver.JOB_STATUS_READY {
+        item := &Item{
+            value: job.Id,
+            priority: job.SchedAt,
+        }
+        if sched.cacheItem != nil && item.priority < sched.cacheItem.priority {
+            if job.Id == sched.cacheItem.value {
+                return true
+            }
+            job, _ = sched.driver.Get(sched.cacheItem.value)
+            sched.cacheItem = item
+            if job.Id <= 0 || job.Status != driver.JOB_STATUS_READY {
+                return false
+            }
+        }
         pq, ok := sched.jobPQ[job.Func]
         if !ok {
             pq1 := make(PriorityQueue, 0)
             pq = &pq1
             sched.jobPQ[job.Func] = pq
             heap.Init(pq)
-        }
-        item := &Item{
-            value: job.Id,
-            priority: job.SchedAt,
         }
         heap.Push(pq, item)
         return true
