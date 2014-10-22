@@ -9,6 +9,7 @@ import (
     "strconv"
     "github.com/Lupino/periodic/driver"
     "github.com/garyburd/redigo/redis"
+    "github.com/golang/groupcache/lru"
 )
 
 
@@ -17,6 +18,7 @@ const REDIS_PREFIX = "periodic:job:"
 
 type RedisDriver struct {
     pool *redis.Pool
+    cache *lru.Cache
 }
 
 
@@ -26,8 +28,10 @@ func NewRedisDriver(server string) RedisDriver {
         conn, err = redis.Dial("tcp", parts[1])
         return
     }, 3)
+    var cache *lru.Cache
+    cache = lru.New(1000)
 
-    return RedisDriver{pool: pool,}
+    return RedisDriver{pool: pool, cache: cache,}
 }
 
 
@@ -36,11 +40,17 @@ func (r RedisDriver) get(jobId int64) (job driver.Job, err error) {
     var conn = r.pool.Get()
     defer conn.Close()
     var key = REDIS_PREFIX + strconv.FormatInt(jobId, 10)
+    if val, hit := r.cache.Get(key); hit {
+        return val.(driver.Job), nil
+    }
     data, err = redis.Bytes(conn.Do("GET", key))
     if err != nil {
         return
     }
     job, err = driver.NewJob(data)
+    if err == nil {
+        r.cache.Add(key, job)
+    }
     return
 }
 
@@ -57,6 +67,7 @@ func (r RedisDriver) Save(job *driver.Job) (err error) {
             err = errors.New(fmt.Sprintf("Update Job %d fail, the old job is not exists.", job.Id))
             return
         }
+        r.cache.Remove(key)
         if old.Name != job.Name {
             if _, e := conn.Do("ZERM", prefix + "name", old.Name); e != nil {
                 log.Printf("Error: ZREM %s %s failed\n", prefix + "name", old.Name)
@@ -101,6 +112,7 @@ func (r RedisDriver) Delete(jobId int64) (err error) {
     _, err = conn.Do("DEL", key)
     conn.Do("ZREM", prefix + "name", job.Name)
     conn.Do("ZREM", REDIS_PREFIX + "ID", strconv.FormatInt(job.Id, 10))
+    r.cache.Remove(key)
     return
 }
 

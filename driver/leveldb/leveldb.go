@@ -11,6 +11,7 @@ import (
     "github.com/syndtr/goleveldb/leveldb"
     "github.com/syndtr/goleveldb/leveldb/util"
     "github.com/syndtr/goleveldb/leveldb/iterator"
+    "github.com/golang/groupcache/lru"
 )
 
 
@@ -21,12 +22,14 @@ const PRE_SEQUENCE = "sequence:"
 
 type LevelDBDriver struct {
     db *leveldb.DB
+    cache *lru.Cache
 }
 
 
 func NewLevelDBDriver(dbpath string) LevelDBDriver {
     var db *leveldb.DB
     var err error
+    var cache *lru.Cache
 
     _, err = os.Stat(dbpath)
 
@@ -38,8 +41,10 @@ func NewLevelDBDriver(dbpath string) LevelDBDriver {
     if err != nil {
         log.Fatal(err)
     }
+    cache = lru.New(1000)
     return LevelDBDriver{
         db: db,
+        cache: cache,
     }
 }
 
@@ -52,6 +57,7 @@ func (l LevelDBDriver) Save(job *driver.Job) (err error) {
             err = errors.New(fmt.Sprintf("Update Job %d fail, the old job is not exists.", job.Id))
             return
         }
+        l.cache.Remove(PRE_JOB + strconv.FormatInt(job.Id, 10))
         if old.Name != job.Name {
             batch.Delete([]byte(PRE_JOB_FUNC + job.Func + ":" + old.Name))
             batch.Put([]byte(PRE_JOB_FUNC + job.Func + ":" + job.Name), []byte(strconv.FormatInt(job.Id, 10)))
@@ -83,6 +89,7 @@ func (l LevelDBDriver) Delete(jobId int64) (err error) {
     batch.Delete([]byte(PRE_JOB_FUNC + job.Func + ":" + job.Name))
     batch.Delete([]byte(PRE_JOB + strconv.FormatInt(job.Id, 10)))
     err = l.db.Write(batch, nil)
+    l.cache.Remove(PRE_JOB + strconv.FormatInt(jobId, 10))
     return
 }
 
@@ -90,11 +97,17 @@ func (l LevelDBDriver) Delete(jobId int64) (err error) {
 func (l LevelDBDriver) Get(jobId int64) (job driver.Job, err error) {
     var data []byte
     var key = PRE_JOB + strconv.FormatInt(jobId, 10)
+    if val, hit := l.cache.Get(key); hit {
+        return val.(driver.Job), nil
+    }
     data, err = l.db.Get([]byte(key), nil)
     if err != nil {
         return
     }
     job, err = driver.NewJob(data)
+    if err == nil {
+        l.cache.Add(key, job)
+    }
     return
 }
 
@@ -107,11 +120,17 @@ func (l LevelDBDriver) GetOne(Func, name string) (job driver.Job, err error) {
         return
     }
     key = PRE_JOB + string(data)
+    if val, hit := l.cache.Get(key); hit {
+        return val.(driver.Job), nil
+    }
     data, err = l.db.Get([]byte(key), nil)
     if err != nil {
         return
     }
     job, err = driver.NewJob(data)
+    if err == nil {
+        l.cache.Add(key, job)
+    }
     return
 }
 
