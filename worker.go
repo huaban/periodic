@@ -3,7 +3,6 @@ package periodic
 import (
     "io"
     "log"
-    "container/list"
     "strconv"
     "bytes"
     "github.com/Lupino/periodic/driver"
@@ -12,7 +11,7 @@ import (
 
 
 type Worker struct {
-    jobQueue *list.List
+    jobQueue map[int64]driver.Job
     conn     Conn
     sched    *Sched
     alive    bool
@@ -23,7 +22,7 @@ type Worker struct {
 func NewWorker(sched *Sched, conn Conn) (worker *Worker) {
     worker = new(Worker)
     worker.conn = conn
-    worker.jobQueue = list.New()
+    worker.jobQueue = make(map[int64]driver.Job)
     worker.sched = sched
     worker.Funcs = make([]string, 0)
     worker.alive = true
@@ -37,7 +36,7 @@ func (worker *Worker) IsAlive() bool {
 
 
 func (worker *Worker) HandleDo(msgId int64, job driver.Job) (err error){
-    worker.jobQueue.PushBack(job)
+    worker.jobQueue[job.Id] = job
     buf := bytes.NewBuffer(nil)
     buf.WriteString(strconv.FormatInt(msgId, 10))
     buf.Write(protocol.NULL_CHAR)
@@ -76,14 +75,18 @@ func (worker *Worker) HandleCanNoDo(Func string) error {
 
 func (worker *Worker) HandleDone(jobId int64) (err error) {
     worker.sched.Done(jobId)
-    removeListJob(worker.jobQueue, jobId)
+    if _, ok := worker.jobQueue[jobId]; ok {
+        delete(worker.jobQueue, jobId)
+    }
     return nil
 }
 
 
 func (worker *Worker) HandleFail(jobId int64) (err error) {
     worker.sched.Fail(jobId)
-    removeListJob(worker.jobQueue, jobId)
+    if _, ok := worker.jobQueue[jobId]; ok {
+        delete(worker.jobQueue, jobId)
+    }
     return nil
 }
 
@@ -100,7 +103,9 @@ func (worker *Worker) HandleCommand(msgId int64, cmd protocol.Command) (err erro
 
 func (worker *Worker) HandleSchedLater(jobId, delay int64) (err error){
     worker.sched.SchedLater(jobId, delay)
-    removeListJob(worker.jobQueue, jobId)
+    if _, ok := worker.jobQueue[jobId]; ok {
+        delete(worker.jobQueue, jobId)
+    }
     return nil
 }
 
@@ -196,10 +201,12 @@ func (worker *Worker) Close() {
     defer worker.conn.Close()
     worker.sched.grabQueue.RemoveWorker(worker)
     worker.alive = false
-    for e := worker.jobQueue.Front(); e != nil; e = e.Next() {
-        worker.sched.Fail(e.Value.(driver.Job).Id)
+    for k, _ := range worker.jobQueue {
+        worker.sched.Fail(k)
     }
+    worker.jobQueue = nil
     for _, Func := range worker.Funcs {
         worker.sched.DecrStatFunc(Func)
     }
+    worker = nil
 }
