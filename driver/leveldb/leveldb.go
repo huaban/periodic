@@ -51,17 +51,9 @@ func NewLevelDBDriver(dbpath string) LevelDBDriver {
 
 func (l LevelDBDriver) Save(job *driver.Job) (err error) {
     batch := new(leveldb.Batch)
+    var isNew = true
     if job.Id > 0 {
-        old, e := l.Get(job.Id)
-        if e != nil || old.Id == 0 {
-            err = errors.New(fmt.Sprintf("Update Job %d fail, the old job is not exists.", job.Id))
-            return
-        }
-        l.cache.Remove(PRE_JOB + strconv.FormatInt(job.Id, 10))
-        if old.Name != job.Name {
-            batch.Delete([]byte(PRE_JOB_FUNC + job.Func + ":" + old.Name))
-            batch.Put([]byte(PRE_JOB_FUNC + job.Func + ":" + job.Name), []byte(strconv.FormatInt(job.Id, 10)))
-        }
+        isNew = false
     } else {
         last_id, e := l.db.Get([]byte(PRE_SEQUENCE + "JOB"), nil)
         if e != nil || last_id == nil {
@@ -70,10 +62,24 @@ func (l LevelDBDriver) Save(job *driver.Job) (err error) {
             id, _ := strconv.ParseInt(string(last_id), 10, 64)
             job.Id = id + 1
         }
-        batch.Put([]byte(PRE_SEQUENCE + "JOB"), []byte(strconv.FormatInt(job.Id, 10)))
-        batch.Put([]byte(PRE_JOB_FUNC + job.Func + ":" + job.Name), []byte(strconv.FormatInt(job.Id, 10)))
     }
-    batch.Put([]byte(PRE_JOB + strconv.FormatInt(job.Id, 10)), job.Bytes())
+    var strId = strconv.FormatInt(job.Id, 10)
+    if isNew {
+        batch.Put([]byte(PRE_SEQUENCE + "JOB"), []byte(strId))
+        batch.Put([]byte(PRE_JOB_FUNC + job.Func + ":" + job.Name), []byte(strId))
+    } else {
+        old, e := l.Get(job.Id)
+        if e != nil || old.Id == 0 {
+            err = errors.New(fmt.Sprintf("Update Job %d fail, the old job is not exists.", job.Id))
+            return
+        }
+        l.cache.Remove(PRE_JOB + strId)
+        if old.Name != job.Name {
+            batch.Delete([]byte(PRE_JOB_FUNC + job.Func + ":" + old.Name))
+            batch.Put([]byte(PRE_JOB_FUNC + job.Func + ":" + job.Name), []byte(strId))
+        }
+    }
+    batch.Put([]byte(PRE_JOB + strId), job.Bytes())
     err = l.db.Write(batch, nil)
     return
 }
@@ -86,10 +92,11 @@ func (l LevelDBDriver) Delete(jobId int64) (err error) {
     if err != nil {
         return
     }
+    var strId = strconv.FormatInt(job.Id, 10)
     batch.Delete([]byte(PRE_JOB_FUNC + job.Func + ":" + job.Name))
-    batch.Delete([]byte(PRE_JOB + strconv.FormatInt(job.Id, 10)))
+    batch.Delete([]byte(PRE_JOB + strId))
     err = l.db.Write(batch, nil)
-    l.cache.Remove(PRE_JOB + strconv.FormatInt(jobId, 10))
+    l.cache.Remove(PRE_JOB + strId)
     return
 }
 
