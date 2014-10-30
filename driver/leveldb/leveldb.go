@@ -5,6 +5,7 @@ import (
     "os"
     "fmt"
     "log"
+    "sync"
     "errors"
     "strconv"
     "github.com/Lupino/periodic/driver"
@@ -22,6 +23,7 @@ const PRE_SEQUENCE = "sequence:"
 
 type LevelDBDriver struct {
     db *leveldb.DB
+    RWLocker *sync.Mutex
     cache *lru.Cache
 }
 
@@ -42,14 +44,18 @@ func NewLevelDBDriver(dbpath string) LevelDBDriver {
         log.Fatal(err)
     }
     cache = lru.New(1000)
+    var RWLocker = new(sync.Mutex)
     return LevelDBDriver{
         db: db,
         cache: cache,
+        RWLocker: RWLocker,
     }
 }
 
 
 func (l LevelDBDriver) Save(job *driver.Job) (err error) {
+    defer l.RWLocker.Unlock()
+    l.RWLocker.Lock()
     batch := new(leveldb.Batch)
     var isNew = true
     if job.Id > 0 {
@@ -68,7 +74,7 @@ func (l LevelDBDriver) Save(job *driver.Job) (err error) {
         batch.Put([]byte(PRE_SEQUENCE + "JOB"), []byte(strId))
         batch.Put([]byte(PRE_JOB_FUNC + job.Func + ":" + job.Name), []byte(strId))
     } else {
-        old, e := l.Get(job.Id)
+        old, e := l.get(job.Id)
         if e != nil || old.Id == 0 {
             err = errors.New(fmt.Sprintf("Update Job %d fail, the old job is not exists.", job.Id))
             return
@@ -86,9 +92,11 @@ func (l LevelDBDriver) Save(job *driver.Job) (err error) {
 
 
 func (l LevelDBDriver) Delete(jobId int64) (err error) {
+    defer l.RWLocker.Unlock()
+    l.RWLocker.Lock()
     var job driver.Job
     batch := new(leveldb.Batch)
-    job, err = l.Get(jobId)
+    job, err = l.get(jobId)
     if err != nil {
         return
     }
@@ -101,7 +109,14 @@ func (l LevelDBDriver) Delete(jobId int64) (err error) {
 }
 
 
-func (l LevelDBDriver) Get(jobId int64) (job driver.Job, err error) {
+func (l LevelDBDriver) Get(jobId int64) (driver.Job, error) {
+    defer l.RWLocker.Unlock()
+    l.RWLocker.Lock()
+    return l.get(jobId)
+}
+
+
+func (l LevelDBDriver) get(jobId int64) (job driver.Job, err error) {
     var data []byte
     var key = PRE_JOB + strconv.FormatInt(jobId, 10)
     if val, hit := l.cache.Get(key); hit {
@@ -120,6 +135,8 @@ func (l LevelDBDriver) Get(jobId int64) (job driver.Job, err error) {
 
 
 func (l LevelDBDriver) GetOne(Func, name string) (job driver.Job, err error) {
+    defer l.RWLocker.Unlock()
+    l.RWLocker.Lock()
     var data []byte
     var key = PRE_JOB_FUNC + Func + ":" + name
     data, err = l.db.Get([]byte(key), nil)
@@ -149,6 +166,7 @@ func (l LevelDBDriver) NewIterator(Func []byte) driver.JobIterator {
     } else {
         prefix = []byte(PRE_JOB_FUNC + string(Func))
     }
+    l.RWLocker.Lock()
     iter := l.db.NewIterator(util.BytesPrefix(prefix), nil)
     return &LevelDBIterator{
         l: l,
@@ -183,7 +201,7 @@ func (iter *LevelDBIterator) Value() (job driver.Job) {
         return
     }
     jobId, _ := strconv.ParseInt(string(data), 10, 64)
-    job, _ = iter.l.Get(jobId)
+    job, _ = iter.l.get(jobId)
     return
 }
 
@@ -195,4 +213,5 @@ func (iter *LevelDBIterator) Error() error {
 
 func (iter *LevelDBIterator) Close() {
     iter.iter.Release()
+    iter.l.RWLocker.Unlock()
 }

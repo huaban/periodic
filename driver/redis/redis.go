@@ -4,6 +4,7 @@ package redis
 import (
     "fmt"
     "log"
+    "sync"
     "errors"
     "strings"
     "strconv"
@@ -18,6 +19,7 @@ const REDIS_PREFIX = "periodic:job:"
 
 type RedisDriver struct {
     pool *redis.Pool
+    RWLocker *sync.Mutex
     cache *lru.Cache
 }
 
@@ -30,8 +32,9 @@ func NewRedisDriver(server string) RedisDriver {
     }, 3)
     var cache *lru.Cache
     cache = lru.New(1000)
+    var RWLocker = new(sync.Mutex)
 
-    return RedisDriver{pool: pool, cache: cache,}
+    return RedisDriver{pool: pool, cache: cache, RWLocker: RWLocker}
 }
 
 
@@ -56,6 +59,8 @@ func (r RedisDriver) get(jobId int64) (job driver.Job, err error) {
 
 
 func (r RedisDriver) Save(job *driver.Job) (err error) {
+    defer r.RWLocker.Unlock()
+    r.RWLocker.Lock()
     var key string
     var prefix = REDIS_PREFIX + job.Func + ":"
     var conn = r.pool.Get()
@@ -99,6 +104,8 @@ func (r RedisDriver) Save(job *driver.Job) (err error) {
 
 
 func (r RedisDriver) Delete(jobId int64) (err error) {
+    defer r.RWLocker.Unlock()
+    r.RWLocker.Lock()
     var key = REDIS_PREFIX + strconv.FormatInt(jobId, 10)
     job, e := r.get(jobId)
     if e != nil {
@@ -118,12 +125,16 @@ func (r RedisDriver) Delete(jobId int64) (err error) {
 
 
 func (r RedisDriver) Get(jobId int64) (job driver.Job, err error) {
+    defer r.RWLocker.Unlock()
+    r.RWLocker.Lock()
     job, err = r.get(jobId)
     return
 }
 
 
 func (r RedisDriver) GetOne(Func string, jobName string) (job driver.Job, err error) {
+    defer r.RWLocker.Unlock()
+    r.RWLocker.Lock()
     var conn = r.pool.Get()
     defer conn.Close()
     jobId, _ := redis.Int64(conn.Do("ZSCORE", REDIS_PREFIX + Func + ":name", jobName))
@@ -135,6 +146,7 @@ func (r RedisDriver) GetOne(Func string, jobName string) (job driver.Job, err er
 
 
 func (r RedisDriver) NewIterator(Func []byte) driver.JobIterator {
+    r.RWLocker.Lock()
     return &RedisIterator{
         Func: Func,
         cursor: 0,
@@ -210,5 +222,5 @@ func (iter *RedisIterator) Error() error {
 
 
 func (iter *RedisIterator) Close() {
-
+    iter.r.RWLocker.Unlock()
 }
