@@ -304,7 +304,10 @@ func (sched *Sched) handleRevertPQ() {
         if !sched.alive {
             break
         }
-        if sched.revertPQ.Len() == 0 {
+        sched.PQLocker.Lock()
+        pqLen := sched.revertPQ.Len()
+        sched.PQLocker.Unlock()
+        if pqLen == 0 {
             sched.resetRevertTimer(time.Minute)
             current =<-sched.revTimer.C
             continue

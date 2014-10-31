@@ -3,6 +3,7 @@ package periodic
 import (
     "io"
     "log"
+    "sync"
     "strconv"
     "bytes"
     "github.com/Lupino/periodic/driver"
@@ -16,6 +17,7 @@ type Worker struct {
     sched    *Sched
     alive    bool
     Funcs    []string
+    locker   *sync.Mutex
 }
 
 
@@ -26,6 +28,7 @@ func NewWorker(sched *Sched, conn Conn) (worker *Worker) {
     worker.sched = sched
     worker.Funcs = make([]string, 0)
     worker.alive = true
+    worker.locker = new(sync.Mutex)
     return
 }
 
@@ -36,6 +39,8 @@ func (worker *Worker) IsAlive() bool {
 
 
 func (worker *Worker) HandleDo(msgId int64, job driver.Job) (err error){
+    defer worker.locker.Unlock()
+    worker.locker.Lock()
     worker.jobQueue[job.Id] = job
     buf := bytes.NewBuffer(nil)
     buf.WriteString(strconv.FormatInt(msgId, 10))
@@ -75,6 +80,8 @@ func (worker *Worker) HandleCanNoDo(Func string) error {
 
 func (worker *Worker) HandleDone(jobId int64) (err error) {
     worker.sched.Done(jobId)
+    defer worker.locker.Unlock()
+    worker.locker.Lock()
     if _, ok := worker.jobQueue[jobId]; ok {
         delete(worker.jobQueue, jobId)
     }
@@ -84,6 +91,8 @@ func (worker *Worker) HandleDone(jobId int64) (err error) {
 
 func (worker *Worker) HandleFail(jobId int64) (err error) {
     worker.sched.Fail(jobId)
+    defer worker.locker.Unlock()
+    worker.locker.Lock()
     if _, ok := worker.jobQueue[jobId]; ok {
         delete(worker.jobQueue, jobId)
     }
@@ -103,6 +112,8 @@ func (worker *Worker) HandleCommand(msgId int64, cmd protocol.Command) (err erro
 
 func (worker *Worker) HandleSchedLater(jobId, delay int64) (err error){
     worker.sched.SchedLater(jobId, delay)
+    defer worker.locker.Unlock()
+    worker.locker.Lock()
     if _, ok := worker.jobQueue[jobId]; ok {
         delete(worker.jobQueue, jobId)
     }
