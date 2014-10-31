@@ -43,7 +43,7 @@ func ShowStatus(entryPoint string) {
     stats := strings.Split(string(_parts[1]), "\n")
     for _, stat := range stats {
         line := strings.Split(stat, ",")
-        fmt.Printf("Func: %s\tWorker: %d\tJob: %d\tProcessing: %d\n",
+        fmt.Printf("Func: %s\tWorker: %s\tJob: %s\tProcessing: %s\n",
                    line[0], line[1], line[2], line[3])
     }
 }
