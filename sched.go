@@ -346,9 +346,11 @@ func (sched *Sched) handleRevertPQ() {
         revertJob.Status = driver.JOB_STATUS_READY
         sched.driver.Save(&revertJob)
         sched.pushJobPQ(revertJob)
+        sched.JobLocker.Lock()
         if _, ok := sched.procQueue[revertJob.Id]; ok {
             delete(sched.procQueue, revertJob.Id)
         }
+        sched.JobLocker.Unlock()
     }
 }
 
@@ -531,7 +533,9 @@ func (sched *Sched) loadJobQueue() {
         if runAt + job.Timeout < current {
             updateQueue = append(updateQueue, job)
         } else {
+            sched.JobLocker.Lock()
             sched.procQueue[job.Id] = job
+            sched.JobLocker.Unlock()
             sched.IncrStatProc(job)
             sched.pushRevertPQ(job)
         }
