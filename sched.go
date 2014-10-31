@@ -198,7 +198,7 @@ func (sched *Sched) lessItem() (lessItem *Item) {
     }
     maybeItem := make(map[string]*Item)
     for Func, stat := range sched.stats {
-        if stat.Worker == 0 {
+        if stat.Worker.Int() == 0 {
             continue
         }
         pq, ok := sched.jobPQ[Func]
@@ -373,7 +373,7 @@ func (sched *Sched) getFuncStat(Func string) *FuncStat {
     sched.FuncLocker.Lock()
     stat, ok := sched.stats[Func]
     if !ok {
-        stat = new(FuncStat)
+        stat = NewFuncStat(Func)
         sched.stats[Func] = stat
     }
     return stat

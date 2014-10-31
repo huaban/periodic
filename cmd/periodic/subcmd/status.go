@@ -4,7 +4,6 @@ import (
     "net"
     "bytes"
     "strings"
-    "encoding/json"
     "github.com/Lupino/periodic"
     "github.com/Lupino/periodic/protocol"
     "fmt"
@@ -41,12 +40,10 @@ func ShowStatus(entryPoint string) {
         err := fmt.Sprint("ParseCommand InvalId %v\n", payload)
         panic(err)
     }
-    stats := make(map[string]periodic.FuncStat)
-    err = json.Unmarshal(_parts[1], &stats)
-    if err != nil {
-        log.Fatal(err)
-    }
-    for Func, stat := range stats {
-        fmt.Printf("Func: %s\tWorker: %d\tJob: %d\tProcessing: %d\n", Func, stat.Worker, stat.Job, stat.Processing)
+    stats := strings.Split(string(_parts[1]), "\n")
+    for _, stat := range stats {
+        line := strings.Split(stat, ",")
+        fmt.Printf("Func: %s\tWorker: %d\tJob: %d\tProcessing: %d\n",
+                   line[0], line[1], line[2], line[3])
     }
 }

@@ -5,7 +5,6 @@ import (
     "log"
     "bytes"
     "strconv"
-    "encoding/json"
     "github.com/Lupino/periodic/driver"
     "github.com/Lupino/periodic/protocol"
 )
@@ -129,11 +128,13 @@ func (client *Client) HandleSubmitJob(msgId int64, payload []byte) (err error) {
 
 
 func (client *Client) HandleStatus(msgId int64) (err error) {
-    data, _ := json.Marshal(client.sched.stats)
     buf := bytes.NewBuffer(nil)
     buf.WriteString(strconv.FormatInt(msgId, 10))
     buf.Write(protocol.NULL_CHAR)
-    buf.Write(data)
+    for _, stat := range client.sched.stats {
+        buf.WriteString(stat.String())
+        buf.WriteString("\n")
+    }
     err = client.conn.Send(buf.Bytes())
     return
 }
@@ -146,7 +147,7 @@ func (client *Client) HandleDropFunc(msgId int64, payload []byte) (err error) {
     defer sched.NotifyJobTimer()
     defer sched.JobLocker.Unlock()
     sched.JobLocker.Lock()
-    if ok && stat.Worker == 0 {
+    if ok && stat.Worker.Int() == 0 {
         iter := sched.driver.NewIterator(payload)
         deleteJob := make([]int64, 0)
         for {
