@@ -115,6 +115,8 @@ func (g *GrabQueue) RemoveWorker(worker *Worker) {
 
 
 func (g GrabQueue) Len() int {
+    defer g.locker.Unlock()
+    g.locker.Lock()
     return g.list.Len()
 }
 
