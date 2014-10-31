@@ -20,6 +20,7 @@ type Sched struct {
     revTimer   *time.Timer
     entryPoint string
     JobLocker  *sync.Mutex
+    TimerLocker *sync.Mutex
     stats      map[string]*FuncStat
     FuncLocker *sync.Mutex
     driver     driver.StoreDriver
@@ -43,6 +44,7 @@ func NewSched(entryPoint string, store driver.StoreDriver, timeout time.Duration
     sched.JobLocker = new(sync.Mutex)
     sched.PQLocker = new(sync.Mutex)
     sched.FuncLocker = new(sync.Mutex)
+    sched.TimerLocker = new(sync.Mutex)
     sched.stats = make(map[string]*FuncStat)
     sched.driver = store
     sched.jobPQ = make(map[string]*PriorityQueue)
@@ -84,12 +86,26 @@ func (sched *Sched) Serve() {
 
 
 func (sched *Sched) NotifyJobTimer() {
-    sched.jobTimer.Reset(time.Millisecond)
+    sched.resetJobTimer(time.Millisecond)
+}
+
+
+func (sched *Sched) resetJobTimer(d time.Duration) {
+    defer sched.TimerLocker.Unlock()
+    sched.TimerLocker.Lock()
+    sched.jobTimer.Reset(d)
 }
 
 
 func (sched *Sched) NotifyRevertTimer() {
-    sched.revTimer.Reset(time.Millisecond)
+    sched.resetRevertTimer(time.Millisecond)
+}
+
+
+func (sched *Sched) resetRevertTimer(d time.Duration) {
+    defer sched.TimerLocker.Unlock()
+    sched.TimerLocker.Lock()
+    sched.revTimer.Reset(d)
 }
 
 
@@ -234,7 +250,7 @@ func (sched *Sched) handleJobPQ() {
             break
         }
         if sched.grabQueue.Len() == 0 {
-            sched.jobTimer.Reset(time.Minute)
+            sched.resetJobTimer(time.Minute)
             current =<-sched.jobTimer.C
             continue
         }
@@ -242,7 +258,7 @@ func (sched *Sched) handleJobPQ() {
         lessItem := sched.lessItem()
 
         if lessItem == nil {
-            sched.jobTimer.Reset(time.Minute)
+            sched.resetJobTimer(time.Minute)
             current =<-sched.jobTimer.C
             continue
         }
@@ -258,7 +274,7 @@ func (sched *Sched) handleJobPQ() {
         timestamp = int64(time.Now().Unix())
 
         if schedJob.SchedAt > timestamp {
-            sched.jobTimer.Reset(time.Second * time.Duration(schedJob.SchedAt - timestamp))
+            sched.resetJobTimer(time.Second * time.Duration(schedJob.SchedAt - timestamp))
             current =<-sched.jobTimer.C
             timestamp = int64(current.Unix())
             if schedJob.SchedAt > timestamp {
@@ -289,7 +305,7 @@ func (sched *Sched) handleRevertPQ() {
             break
         }
         if sched.revertPQ.Len() == 0 {
-            sched.revTimer.Reset(time.Minute)
+            sched.resetRevertTimer(time.Minute)
             current =<-sched.revTimer.C
             continue
         }
@@ -299,7 +315,7 @@ func (sched *Sched) handleRevertPQ() {
         sched.PQLocker.Unlock()
 
         if item == nil {
-            sched.revTimer.Reset(time.Minute)
+            sched.resetRevertTimer(time.Minute)
             current =<-sched.revTimer.C
             continue
         }
@@ -314,7 +330,7 @@ func (sched *Sched) handleRevertPQ() {
         timestamp = int64(time.Now().Unix())
 
         if item.priority > timestamp {
-            sched.revTimer.Reset(time.Second * time.Duration(item.priority - timestamp))
+            sched.resetRevertTimer(time.Second * time.Duration(item.priority - timestamp))
             current =<-sched.revTimer.C
             timestamp = int64(current.Unix())
             if item.priority > timestamp {
