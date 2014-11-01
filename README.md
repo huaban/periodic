@@ -14,6 +14,9 @@ The client is responsible for creating a job to be run and sending it to a perio
 The periodic server will find a suitable worker that can run the job when then job time is up.
 The worker performs the work requested by the client and sends a stat to the periodic server.
 Periodic provides client and worker APIs that your applications call to talk with the periodic server (also known as `periodic -d`) so you don’t need to deal with networking or mapping of jobs.
+
+![Periodic](https://raw.githubusercontent.com/Lupino/periodic/master/resources/periodic.jpg)
+
 Internally, the periodic client and worker APIs communicate with the periodic server using TCP sockets.
 To explain how Periodic works in more detail, lets look at a simple application that will print a string on a random delay.
 The example is given in [Python3](http://python.org), although other APIs will look quite similar.
