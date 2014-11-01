@@ -12,11 +12,11 @@ import (
 
 type Client struct {
     sched *Sched
-    conn  Conn
+    conn  protocol.Conn
 }
 
 
-func NewClient(sched *Sched, conn Conn) (client *Client) {
+func NewClient(sched *Sched, conn protocol.Conn) (client *Client) {
     client = new(Client)
     client.conn = conn
     client.sched = sched

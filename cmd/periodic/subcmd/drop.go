@@ -4,7 +4,6 @@ package subcmd
 import (
     "net"
     "strings"
-    "github.com/Lupino/periodic"
     "github.com/Lupino/periodic/protocol"
     "fmt"
     "log"
@@ -18,7 +17,7 @@ func DropFunc(entryPoint, Func string) {
     if err != nil {
         log.Fatal(err)
     }
-    conn := periodic.Conn{Conn: c}
+    conn := protocol.Conn{Conn: c}
     defer conn.Close()
     err = conn.Send(protocol.TYPE_CLIENT.Bytes())
     if err != nil {

@@ -13,7 +13,7 @@ import (
 
 type Worker struct {
     jobQueue map[int64]driver.Job
-    conn     Conn
+    conn     protocol.Conn
     sched    *Sched
     alive    bool
     Funcs    []string
@@ -21,7 +21,7 @@ type Worker struct {
 }
 
 
-func NewWorker(sched *Sched, conn Conn) (worker *Worker) {
+func NewWorker(sched *Sched, conn protocol.Conn) (worker *Worker) {
     worker = new(Worker)
     worker.conn = conn
     worker.jobQueue = make(map[int64]driver.Job)

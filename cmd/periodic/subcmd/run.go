@@ -4,7 +4,6 @@ package subcmd
 import (
     "net"
     "strings"
-    "github.com/Lupino/periodic"
     "github.com/Lupino/periodic/driver"
     "github.com/Lupino/periodic/protocol"
     "fmt"
@@ -31,7 +30,7 @@ func Run(entryPoint, Func, cmd string) {
             time.Sleep(5 * time.Second)
             continue
         }
-        conn := periodic.Conn{Conn: c}
+        conn := protocol.Conn{Conn: c}
         err = handleWorker(conn, Func, cmd)
         if err != nil {
             if err != io.EOF {
@@ -43,7 +42,7 @@ func Run(entryPoint, Func, cmd string) {
 }
 
 
-func handleWorker(conn periodic.Conn, Func, cmd string) (err error) {
+func handleWorker(conn protocol.Conn, Func, cmd string) (err error) {
     err = conn.Send(protocol.TYPE_WORKER.Bytes())
     if err != nil {
         return
