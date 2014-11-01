@@ -1,6 +1,13 @@
 Periodic task system
 ====================
 
+What is Periodic?
+-----------------
+
+Periodic is a [Gearman](http://gearman.org) like task system,
+provides a generic application framework to do the periodic work.
+
+
 Install
 -------
 
