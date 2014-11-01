@@ -74,6 +74,8 @@ and forwards the job on to one of the free workers.
 The Periodic worker API then takes this request,
 runs the function `random_print`, and sends the job stat of that function back to the periodic server.
 
+![Random print](https://raw.githubusercontent.com/Lupino/periodic/master/resources/random_print.png)
+
 As you can see, the client and worker APIs (along with the periodic server) deal with the job management and network communication so you can focus on the application parts.
 
 
