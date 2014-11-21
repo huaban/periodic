@@ -21,10 +21,8 @@ func ParseCommand(payload []byte) (msgId []byte, cmd Command, data []byte) {
         panic(err)
     }
     cmd = Command(parts[1][0])
-    if len(parts) == 3 && len(parts) > 0 {
+    if len(parts) == 3 && len(parts[2]) > 0 {
         data = parts[2]
-    } else {
-        panic(err)
     }
     return
 }
