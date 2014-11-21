@@ -13,9 +13,9 @@ const (
     // for job
     GRAB_JOB    // client
     SCHED_LATER // client
-    JOB_DONE    // client
-    JOB_FAIL    // client
-    WAIT_JOB    // server
+    WORK_DONE   // client
+    WORK_FAIL   // client
+    JOB_ASSIGN  // server
     NO_JOB      // server
     // for func
     CAN_DO      // client
@@ -50,11 +50,11 @@ func (c Command) String() string {
         case 2:
             return "SCHED_LATER"
         case 3:
-            return "JOB_DONE"
+            return "WORK_DONE"
         case 4:
-            return "JOB_FAIL"
+            return "WORK_FAIL"
         case 5:
-            return "WAIT_JOB"
+            return "JOB_ASSIGN"
         case 6:
             return "NO_JOB"
         case 7:

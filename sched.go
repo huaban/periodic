@@ -166,7 +166,7 @@ func (sched *Sched) SubmitJob(grabItem GrabItem, job driver.Job) bool {
     if !grabItem.w.alive {
         return false
     }
-    if err := grabItem.w.HandleDo(grabItem.msgId, job); err != nil {
+    if err := grabItem.w.HandleJobAssign(grabItem.msgId, job); err != nil {
         grabItem.w.alive = false
         return false
     }

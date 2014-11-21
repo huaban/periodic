@@ -38,12 +38,14 @@ func (worker *Worker) IsAlive() bool {
 }
 
 
-func (worker *Worker) HandleDo(msgId []byte, job driver.Job) (err error){
+func (worker *Worker) HandleJobAssign(msgId []byte, job driver.Job) (err error){
     defer worker.locker.Unlock()
     worker.locker.Lock()
     worker.jobQueue[job.Id] = job
     buf := bytes.NewBuffer(nil)
     buf.Write(msgId)
+    buf.Write(protocol.NULL_CHAR)
+    buf.Write(protocol.JOB_ASSIGN.Bytes())
     buf.Write(protocol.NULL_CHAR)
     buf.WriteString(strconv.FormatInt(job.Id, 10))
     buf.Write(protocol.NULL_CHAR)
@@ -159,11 +161,11 @@ func (worker *Worker) Handle() {
         case protocol.GRAB_JOB:
             err = worker.HandleGrabJob(msgId)
             break
-        case protocol.JOB_DONE:
+        case protocol.WORK_DONE:
             jobId, _ := strconv.ParseInt(string(payload), 10, 0)
             err = worker.HandleDone(jobId)
             break
-        case protocol.JOB_FAIL:
+        case protocol.WORK_FAIL:
             jobId, _ := strconv.ParseInt(string(payload), 10, 0)
             err = worker.HandleFail(jobId)
             break
