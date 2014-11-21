@@ -5,6 +5,7 @@ import (
     "strconv"
 )
 
+// Define command type.
 type Command int
 
 const (

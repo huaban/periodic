@@ -8,7 +8,7 @@ type Conn struct {
     net.Conn
 }
 
-
+// Receive waits for a new message on conn, and receives its payload.
 func (conn *Conn) Receive() (rdata []byte, rerr error) {
 
 	// Read header
@@ -48,6 +48,7 @@ func (conn *Conn) receive(buf []byte) (int, error) {
 	return bufn, nil
 }
 
+// Send a new message.
 func (conn *Conn) Send(data []byte) error {
 	header, err := makeHeader(data)
 	if err != nil {

@@ -6,9 +6,10 @@ import (
     "errors"
 )
 
+// Split the message payload
 var NULL_CHAR = []byte("\x00\x01")
 
-
+// Parse command payload to extract msgId cmd and data
 func ParseCommand(payload []byte) (msgId []byte, cmd Command, data []byte) {
     parts := bytes.SplitN(payload, NULL_CHAR, 3)
     var err = fmt.Sprintf("InvalId %v\n", payload)
@@ -28,7 +29,14 @@ func ParseCommand(payload []byte) (msgId []byte, cmd Command, data []byte) {
     return
 }
 
-
+// Framing:
+// In order to handle framing in Send/Recieve, as these give frame
+// boundaries we use a very simple 4 bytes header. It is a big endiand
+// uint32 where the high bit is set if the message includes a file
+// descriptor. The rest of the uint32 is the length of the next frame.
+// We need the bit in order to be able to assign recieved fds to
+// the right message, as multiple messages may be coalesced into
+// a single recieve operation.
 func makeHeader(data []byte) ([]byte, error) {
     header := make([]byte, 4)
 
