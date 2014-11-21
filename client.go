@@ -4,7 +4,6 @@ import (
     "io"
     "log"
     "bytes"
-    "strconv"
     "github.com/Lupino/periodic/driver"
     "github.com/Lupino/periodic/protocol"
 )
@@ -27,7 +26,7 @@ func NewClient(sched *Sched, conn protocol.Conn) (client *Client) {
 func (client *Client) Handle() {
     var payload []byte
     var err error
-    var msgId int64
+    var msgId []byte
     var cmd protocol.Command
     var conn = client.conn
     defer func() {
@@ -74,9 +73,9 @@ func (client *Client) Handle() {
 }
 
 
-func (client *Client) HandleCommand(msgId int64, cmd protocol.Command) (err error) {
+func (client *Client) HandleCommand(msgId []byte, cmd protocol.Command) (err error) {
     buf := bytes.NewBuffer(nil)
-    buf.WriteString(strconv.FormatInt(msgId, 10))
+    buf.Write(msgId)
     buf.Write(protocol.NULL_CHAR)
     buf.Write(cmd.Bytes())
     err = client.conn.Send(buf.Bytes())
@@ -84,7 +83,7 @@ func (client *Client) HandleCommand(msgId int64, cmd protocol.Command) (err erro
 }
 
 
-func (client *Client) HandleSubmitJob(msgId int64, payload []byte) (err error) {
+func (client *Client) HandleSubmitJob(msgId []byte, payload []byte) (err error) {
     var job driver.Job
     var e error
     var conn = client.conn
@@ -127,9 +126,9 @@ func (client *Client) HandleSubmitJob(msgId int64, payload []byte) (err error) {
 }
 
 
-func (client *Client) HandleStatus(msgId int64) (err error) {
+func (client *Client) HandleStatus(msgId []byte) (err error) {
     buf := bytes.NewBuffer(nil)
-    buf.WriteString(strconv.FormatInt(msgId, 10))
+    buf.Write(msgId)
     buf.Write(protocol.NULL_CHAR)
     for _, stat := range client.sched.stats {
         buf.WriteString(stat.String())
@@ -140,7 +139,7 @@ func (client *Client) HandleStatus(msgId int64) (err error) {
 }
 
 
-func (client *Client) HandleDropFunc(msgId int64, payload []byte) (err error) {
+func (client *Client) HandleDropFunc(msgId []byte, payload []byte) (err error) {
     Func := string(payload)
     stat, ok := client.sched.stats[Func]
     sched := client.sched

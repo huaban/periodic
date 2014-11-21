@@ -4,19 +4,18 @@ import (
     "fmt"
     "bytes"
     "errors"
-    "strconv"
 )
 
 var NULL_CHAR = []byte("\x00\x01")
 
 
-func ParseCommand(payload []byte) (msgId int64, cmd Command, data []byte) {
+func ParseCommand(payload []byte) (msgId []byte, cmd Command, data []byte) {
     parts := bytes.SplitN(payload, NULL_CHAR, 3)
     var err = fmt.Sprintf("InvalId %v\n", payload)
     if len(parts) == 1 {
         panic(err)
     }
-    msgId, _ = strconv.ParseInt(string(parts[0]), 10, 0)
+    msgId = parts[0]
     if len(parts[1]) != 1 {
         panic(err)
     }

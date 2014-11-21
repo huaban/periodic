@@ -38,12 +38,12 @@ func (worker *Worker) IsAlive() bool {
 }
 
 
-func (worker *Worker) HandleDo(msgId int64, job driver.Job) (err error){
+func (worker *Worker) HandleDo(msgId []byte, job driver.Job) (err error){
     defer worker.locker.Unlock()
     worker.locker.Lock()
     worker.jobQueue[job.Id] = job
     buf := bytes.NewBuffer(nil)
-    buf.WriteString(strconv.FormatInt(msgId, 10))
+    buf.Write(msgId)
     buf.Write(protocol.NULL_CHAR)
     buf.WriteString(strconv.FormatInt(job.Id, 10))
     buf.Write(protocol.NULL_CHAR)
@@ -100,9 +100,9 @@ func (worker *Worker) HandleFail(jobId int64) (err error) {
 }
 
 
-func (worker *Worker) HandleCommand(msgId int64, cmd protocol.Command) (err error) {
+func (worker *Worker) HandleCommand(msgId []byte, cmd protocol.Command) (err error) {
     buf := bytes.NewBuffer(nil)
-    buf.WriteString(strconv.FormatInt(msgId, 10))
+    buf.Write(msgId)
     buf.Write(protocol.NULL_CHAR)
     buf.Write(cmd.Bytes())
     err = worker.conn.Send(buf.Bytes())
@@ -121,7 +121,7 @@ func (worker *Worker) HandleSchedLater(jobId, delay int64) (err error){
 }
 
 
-func (worker *Worker) HandleGrabJob(msgId int64) (err error){
+func (worker *Worker) HandleGrabJob(msgId []byte) (err error){
     item := GrabItem{
         w: worker,
         msgId: msgId,
@@ -136,7 +136,7 @@ func (worker *Worker) Handle() {
     var payload []byte
     var err error
     var conn = worker.conn
-    var msgId int64
+    var msgId []byte
     var cmd protocol.Command
     defer func() {
         if x := recover(); x != nil {

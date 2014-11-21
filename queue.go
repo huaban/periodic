@@ -3,6 +3,7 @@ package periodic
 import (
     "fmt"
     "sync"
+    "bytes"
     "container/list"
 )
 
@@ -49,7 +50,7 @@ func (pq *PriorityQueue) Pop() interface{} {
 
 type GrabItem struct {
     w     *Worker
-    msgId int64
+    msgId []byte
 }
 
 
@@ -58,6 +59,14 @@ func (item GrabItem) Has(Func string) bool {
         if F == Func {
             return true
         }
+    }
+    return false
+}
+
+
+func (item GrabItem) Equal(item1 GrabItem) bool {
+    if item1.w == item.w && bytes.Equal(item.msgId, item1.msgId) {
+        return true
     }
     return false
 }
@@ -95,7 +104,7 @@ func (g *GrabQueue) Remove(item GrabItem) {
     g.locker.Lock()
     for e := g.list.Front(); e != nil; e = e.Next() {
         item1 := e.Value.(GrabItem)
-        if item1 == item {
+        if item.Equal(item1) {
             g.list.Remove(e)
         }
     }
