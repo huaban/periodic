@@ -105,11 +105,11 @@ func handleWorker(conn protocol.Conn, Func, cmd string) (err error) {
         buf.Write(msgId)
         buf.Write(protocol.NULL_CHAR)
         if err != nil || fail {
-            buf.WriteByte(byte(protocol.JOB_FAIL))
+            buf.WriteByte(byte(protocol.WORK_FAIL))
         } else if schedLater > 0 {
             buf.WriteByte(byte(protocol.SCHED_LATER))
         } else {
-            buf.WriteByte(byte(protocol.JOB_DONE))
+            buf.WriteByte(byte(protocol.WORK_DONE))
         }
         buf.Write(protocol.NULL_CHAR)
         buf.Write(jobHandle)
