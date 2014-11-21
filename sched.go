@@ -7,6 +7,7 @@ import (
     "sync"
     "strings"
     "container/heap"
+    "github.com/Lupino/periodic/stat"
     "github.com/Lupino/periodic/driver"
     "github.com/Lupino/periodic/protocol"
 )
@@ -21,7 +22,7 @@ type Sched struct {
     entryPoint string
     JobLocker  *sync.Mutex
     TimerLocker *sync.Mutex
-    stats      map[string]*FuncStat
+    stats      map[string]*stat.FuncStat
     FuncLocker *sync.Mutex
     driver     driver.StoreDriver
     jobPQ      map[string]*PriorityQueue
@@ -45,7 +46,7 @@ func NewSched(entryPoint string, store driver.StoreDriver, timeout time.Duration
     sched.PQLocker = new(sync.Mutex)
     sched.FuncLocker = new(sync.Mutex)
     sched.TimerLocker = new(sync.Mutex)
-    sched.stats = make(map[string]*FuncStat)
+    sched.stats = make(map[string]*stat.FuncStat)
     sched.driver = store
     sched.jobPQ = make(map[string]*PriorityQueue)
     sched.timeout = timeout
@@ -373,15 +374,15 @@ func (sched *Sched) Fail(jobId int64) {
 }
 
 
-func (sched *Sched) getFuncStat(Func string) *FuncStat {
+func (sched *Sched) getFuncStat(Func string) *stat.FuncStat {
     defer sched.FuncLocker.Unlock()
     sched.FuncLocker.Lock()
-    stat, ok := sched.stats[Func]
+    st, ok := sched.stats[Func]
     if !ok {
-        stat = NewFuncStat(Func)
-        sched.stats[Func] = stat
+        st = stat.NewFuncStat(Func)
+        sched.stats[Func] = st
     }
-    return stat
+    return st
 }
 
 

@@ -1,4 +1,4 @@
-package periodic
+package stat
 
 import (
     "fmt"
@@ -26,14 +26,5 @@ func TestCounter(t *testing.T) {
     c.Decr()
     if c.c != 0 {
         t.Fatalf("counter: except: 0, got: %d\n", c)
-    }
-}
-
-
-func TestFuncStat(t *testing.T) {
-    var stat = NewFuncStat("test")
-    stat.Worker.Incr()
-    if stat.String() != "test,1,0,0" {
-        t.Fatalf("FuncStat: except: test,1,0,0, got: %s\n", stat)
     }
 }
