@@ -11,37 +11,37 @@ import (
 )
 
 
-type Worker struct {
+type worker struct {
     jobQueue map[int64]driver.Job
     conn     protocol.Conn
     sched    *Sched
     alive    bool
-    Funcs    []string
+    funcs    []string
     locker   *sync.Mutex
 }
 
 
-func NewWorker(sched *Sched, conn protocol.Conn) (worker *Worker) {
-    worker = new(Worker)
-    worker.conn = conn
-    worker.jobQueue = make(map[int64]driver.Job)
-    worker.sched = sched
-    worker.Funcs = make([]string, 0)
-    worker.alive = true
-    worker.locker = new(sync.Mutex)
+func newWorker(sched *Sched, conn protocol.Conn) (w *worker) {
+    w = new(worker)
+    w.conn = conn
+    w.jobQueue = make(map[int64]driver.Job)
+    w.sched = sched
+    w.funcs = make([]string, 0)
+    w.alive = true
+    w.locker = new(sync.Mutex)
     return
 }
 
 
-func (worker *Worker) IsAlive() bool {
-    return worker.alive
+func (w *worker) IsAlive() bool {
+    return w.alive
 }
 
 
-func (worker *Worker) HandleJobAssign(msgId []byte, job driver.Job) (err error){
-    defer worker.locker.Unlock()
-    worker.locker.Lock()
-    worker.jobQueue[job.Id] = job
+func (w *worker) handleJobAssign(msgId []byte, job driver.Job) (err error){
+    defer w.locker.Unlock()
+    w.locker.Lock()
+    w.jobQueue[job.Id] = job
     buf := bytes.NewBuffer(nil)
     buf.Write(msgId)
     buf.Write(protocol.NULL_CHAR)
@@ -50,107 +50,107 @@ func (worker *Worker) HandleJobAssign(msgId []byte, job driver.Job) (err error){
     buf.WriteString(strconv.FormatInt(job.Id, 10))
     buf.Write(protocol.NULL_CHAR)
     buf.Write(job.Bytes())
-    err = worker.conn.Send(buf.Bytes())
+    err = w.conn.Send(buf.Bytes())
     return
 }
 
 
-func (worker *Worker) HandleCanDo(Func string) error {
-    for _, f := range worker.Funcs {
+func (w *worker) handleCanDo(Func string) error {
+    for _, f := range w.funcs {
         if f == Func {
             return nil
         }
     }
-    worker.Funcs = append(worker.Funcs, Func)
-    worker.sched.IncrStatFunc(Func)
+    w.funcs = append(w.funcs, Func)
+    w.sched.incrStatFunc(Func)
     return nil
 }
 
 
-func (worker *Worker) HandleCanNoDo(Func string) error {
+func (w *worker) handleCanNoDo(Func string) error {
     newFuncs := make([]string, 0)
-    for _, f := range worker.Funcs {
+    for _, f := range w.funcs {
         if f == Func {
             continue
         }
         newFuncs = append(newFuncs, f)
     }
-    worker.Funcs = newFuncs
+    w.funcs = newFuncs
     return nil
 }
 
 
-func (worker *Worker) HandleDone(jobId int64) (err error) {
-    worker.sched.Done(jobId)
-    defer worker.locker.Unlock()
-    worker.locker.Lock()
-    if _, ok := worker.jobQueue[jobId]; ok {
-        delete(worker.jobQueue, jobId)
+func (w *worker) handleDone(jobId int64) (err error) {
+    w.sched.done(jobId)
+    defer w.locker.Unlock()
+    w.locker.Lock()
+    if _, ok := w.jobQueue[jobId]; ok {
+        delete(w.jobQueue, jobId)
     }
     return nil
 }
 
 
-func (worker *Worker) HandleFail(jobId int64) (err error) {
-    worker.sched.Fail(jobId)
-    defer worker.locker.Unlock()
-    worker.locker.Lock()
-    if _, ok := worker.jobQueue[jobId]; ok {
-        delete(worker.jobQueue, jobId)
+func (w *worker) handleFail(jobId int64) (err error) {
+    w.sched.fail(jobId)
+    defer w.locker.Unlock()
+    w.locker.Lock()
+    if _, ok := w.jobQueue[jobId]; ok {
+        delete(w.jobQueue, jobId)
     }
     return nil
 }
 
 
-func (worker *Worker) HandleCommand(msgId []byte, cmd protocol.Command) (err error) {
+func (w *worker) handleCommand(msgId []byte, cmd protocol.Command) (err error) {
     buf := bytes.NewBuffer(nil)
     buf.Write(msgId)
     buf.Write(protocol.NULL_CHAR)
     buf.Write(cmd.Bytes())
-    err = worker.conn.Send(buf.Bytes())
+    err = w.conn.Send(buf.Bytes())
     return
 }
 
 
-func (worker *Worker) HandleSchedLater(jobId, delay int64) (err error){
-    worker.sched.SchedLater(jobId, delay)
-    defer worker.locker.Unlock()
-    worker.locker.Lock()
-    if _, ok := worker.jobQueue[jobId]; ok {
-        delete(worker.jobQueue, jobId)
+func (w *worker) handleSchedLater(jobId, delay int64) (err error){
+    w.sched.schedLater(jobId, delay)
+    defer w.locker.Unlock()
+    w.locker.Lock()
+    if _, ok := w.jobQueue[jobId]; ok {
+        delete(w.jobQueue, jobId)
     }
     return nil
 }
 
 
-func (worker *Worker) HandleGrabJob(msgId []byte) (err error){
-    item := GrabItem{
-        w: worker,
+func (w *worker) handleGrabJob(msgId []byte) (err error){
+    item := grabItem{
+        w: w,
         msgId: msgId,
     }
-    worker.sched.grabQueue.Push(item)
-    worker.sched.NotifyJobTimer()
+    w.sched.grabQueue.push(item)
+    w.sched.notifyJobTimer()
     return nil
 }
 
 
-func (worker *Worker) Handle() {
+func (w *worker) handle() {
     var payload []byte
     var err error
-    var conn = worker.conn
+    var conn = w.conn
     var msgId []byte
     var cmd protocol.Command
     defer func() {
         if x := recover(); x != nil {
-            log.Printf("[Worker] painc: %v\n", x)
+            log.Printf("[worker] painc: %v\n", x)
         }
     } ()
-    defer worker.Close()
+    defer w.Close()
     for {
         payload, err = conn.Receive()
         if err != nil {
             if err != io.EOF {
-                log.Printf("WorkerError: %s\n", err.Error())
+                log.Printf("workerError: %s\n", err.Error())
             }
             break
         }
@@ -159,15 +159,15 @@ func (worker *Worker) Handle() {
 
         switch cmd {
         case protocol.GRAB_JOB:
-            err = worker.HandleGrabJob(msgId)
+            err = w.handleGrabJob(msgId)
             break
         case protocol.WORK_DONE:
             jobId, _ := strconv.ParseInt(string(payload), 10, 0)
-            err = worker.HandleDone(jobId)
+            err = w.handleDone(jobId)
             break
         case protocol.WORK_FAIL:
             jobId, _ := strconv.ParseInt(string(payload), 10, 0)
-            err = worker.HandleFail(jobId)
+            err = w.handleFail(jobId)
             break
         case protocol.SCHED_LATER:
             parts := bytes.SplitN(payload, protocol.NULL_CHAR, 2)
@@ -177,49 +177,49 @@ func (worker *Worker) Handle() {
             }
             jobId, _ := strconv.ParseInt(string(parts[0]), 10, 0)
             delay, _ := strconv.ParseInt(string(parts[1]), 10, 0)
-            err = worker.HandleSchedLater(jobId, delay)
+            err = w.handleSchedLater(jobId, delay)
             break
         case protocol.SLEEP:
-            err = worker.HandleCommand(msgId, protocol.NOOP)
+            err = w.handleCommand(msgId, protocol.NOOP)
             break
         case protocol.PING:
-            err = worker.HandleCommand(msgId, protocol.PONG)
+            err = w.handleCommand(msgId, protocol.PONG)
             break
         case protocol.CAN_DO:
-            err = worker.HandleCanDo(string(payload))
+            err = w.handleCanDo(string(payload))
             break
         case protocol.CANT_DO:
-            err = worker.HandleCanNoDo(string(payload))
+            err = w.handleCanNoDo(string(payload))
             break
         default:
-            err = worker.HandleCommand(msgId, protocol.UNKNOWN)
+            err = w.handleCommand(msgId, protocol.UNKNOWN)
             break
         }
         if err != nil {
             if err != io.EOF {
-                log.Printf("WorkerError: %s\n", err.Error())
+                log.Printf("workerError: %s\n", err.Error())
             }
             break
         }
 
-        if !worker.alive {
+        if !w.alive {
             break
         }
     }
 }
 
 
-func (worker *Worker) Close() {
-    defer worker.sched.NotifyJobTimer()
-    defer worker.conn.Close()
-    worker.sched.grabQueue.RemoveWorker(worker)
-    worker.alive = false
-    for k, _ := range worker.jobQueue {
-        worker.sched.Fail(k)
+func (w *worker) Close() {
+    defer w.sched.notifyJobTimer()
+    defer w.conn.Close()
+    w.sched.grabQueue.removeWorker(w)
+    w.alive = false
+    for k, _ := range w.jobQueue {
+        w.sched.fail(k)
     }
-    worker.jobQueue = nil
-    for _, Func := range worker.Funcs {
-        worker.sched.DecrStatFunc(Func)
+    w.jobQueue = nil
+    for _, Func := range w.funcs {
+        w.sched.decrStatFunc(Func)
     }
-    worker = nil
+    w = nil
 }

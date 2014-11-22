@@ -9,29 +9,29 @@ import (
 )
 
 
-type Client struct {
+type client struct {
     sched *Sched
     conn  protocol.Conn
 }
 
 
-func NewClient(sched *Sched, conn protocol.Conn) (client *Client) {
-    client = new(Client)
-    client.conn = conn
-    client.sched = sched
+func newClient(sched *Sched, conn protocol.Conn) (c *client) {
+    c = new(client)
+    c.conn = conn
+    c.sched = sched
     return
 }
 
 
-func (client *Client) Handle() {
+func (c *client) handle() {
     var payload []byte
     var err error
     var msgId []byte
     var cmd protocol.Command
-    var conn = client.conn
+    var conn = c.conn
     defer func() {
         if x := recover(); x != nil {
-            log.Printf("[Client] painc: %v\n", x)
+            log.Printf("[client] painc: %v\n", x)
         }
     } ()
     defer conn.Close()
@@ -39,7 +39,7 @@ func (client *Client) Handle() {
         payload, err = conn.Receive()
         if err != nil {
             if err != io.EOF {
-                log.Printf("ClientError: %s\n", err.Error())
+                log.Printf("clientError: %s\n", err.Error())
             }
             return
         }
@@ -48,24 +48,24 @@ func (client *Client) Handle() {
 
         switch cmd {
         case protocol.SUBMIT_JOB:
-            err = client.HandleSubmitJob(msgId, payload)
+            err = c.handleSubmitJob(msgId, payload)
             break
         case protocol.STATUS:
-            err = client.HandleStatus(msgId)
+            err = c.handleStatus(msgId)
             break
         case protocol.PING:
-            err = client.HandleCommand(msgId, protocol.PONG)
+            err = c.handleCommand(msgId, protocol.PONG)
             break
         case protocol.DROP_FUNC:
-            err = client.HandleDropFunc(msgId, payload)
+            err = c.handleDropFunc(msgId, payload)
             break
         default:
-            err = client.HandleCommand(msgId, protocol.UNKNOWN)
+            err = c.handleCommand(msgId, protocol.UNKNOWN)
             break
         }
         if err != nil {
             if err != io.EOF {
-                log.Printf("ClientError: %s\n", err.Error())
+                log.Printf("clientError: %s\n", err.Error())
             }
             return
         }
@@ -73,23 +73,23 @@ func (client *Client) Handle() {
 }
 
 
-func (client *Client) HandleCommand(msgId []byte, cmd protocol.Command) (err error) {
+func (c *client) handleCommand(msgId []byte, cmd protocol.Command) (err error) {
     buf := bytes.NewBuffer(nil)
     buf.Write(msgId)
     buf.Write(protocol.NULL_CHAR)
     buf.Write(cmd.Bytes())
-    err = client.conn.Send(buf.Bytes())
+    err = c.conn.Send(buf.Bytes())
     return
 }
 
 
-func (client *Client) HandleSubmitJob(msgId []byte, payload []byte) (err error) {
+func (c *client) handleSubmitJob(msgId []byte, payload []byte) (err error) {
     var job driver.Job
     var e error
-    var conn = client.conn
-    var sched = client.sched
-    defer sched.JobLocker.Unlock()
-    sched.JobLocker.Lock()
+    var conn = c.conn
+    var sched = c.sched
+    defer sched.jobLocker.Unlock()
+    sched.jobLocker.Lock()
     job, e = driver.NewJob(payload)
     if e != nil {
         err = conn.Send([]byte(e.Error()))
@@ -102,7 +102,7 @@ func (client *Client) HandleSubmitJob(msgId []byte, payload []byte) (err error) 
     if e == nil && oldJob.Id > 0 {
         job.Id = oldJob.Id
         if oldJob.Status == driver.JOB_STATUS_PROC {
-            sched.DecrStatProc(oldJob)
+            sched.decrStatProc(oldJob)
             sched.removeRevertPQ(job)
             changed = true
         }
@@ -115,37 +115,37 @@ func (client *Client) HandleSubmitJob(msgId []byte, payload []byte) (err error) 
     }
 
     if is_new {
-        sched.IncrStatJob(job)
+        sched.incrStatJob(job)
     }
     if is_new || changed {
         sched.pushJobPQ(job)
     }
-    sched.NotifyJobTimer()
-    err = client.HandleCommand(msgId, protocol.SUCCESS)
+    sched.notifyJobTimer()
+    err = c.handleCommand(msgId, protocol.SUCCESS)
     return
 }
 
 
-func (client *Client) HandleStatus(msgId []byte) (err error) {
+func (c *client) handleStatus(msgId []byte) (err error) {
     buf := bytes.NewBuffer(nil)
     buf.Write(msgId)
     buf.Write(protocol.NULL_CHAR)
-    for _, stat := range client.sched.stats {
+    for _, stat := range c.sched.stats {
         buf.WriteString(stat.String())
         buf.WriteString("\n")
     }
-    err = client.conn.Send(buf.Bytes())
+    err = c.conn.Send(buf.Bytes())
     return
 }
 
 
-func (client *Client) HandleDropFunc(msgId []byte, payload []byte) (err error) {
+func (c *client) handleDropFunc(msgId []byte, payload []byte) (err error) {
     Func := string(payload)
-    stat, ok := client.sched.stats[Func]
-    sched := client.sched
-    defer sched.NotifyJobTimer()
-    defer sched.JobLocker.Unlock()
-    sched.JobLocker.Lock()
+    stat, ok := c.sched.stats[Func]
+    sched := c.sched
+    defer sched.notifyJobTimer()
+    defer sched.jobLocker.Unlock()
+    sched.jobLocker.Lock()
     if ok && stat.Worker.Int() == 0 {
         iter := sched.driver.NewIterator(payload)
         deleteJob := make([]int64, 0)
@@ -160,9 +160,9 @@ func (client *Client) HandleDropFunc(msgId []byte, payload []byte) (err error) {
         for _, jobId := range deleteJob {
             sched.driver.Delete(jobId)
         }
-        delete(client.sched.stats, Func)
-        delete(client.sched.jobPQ, Func)
+        delete(c.sched.stats, Func)
+        delete(c.sched.jobPQ, Func)
     }
-    err = client.HandleCommand(msgId, protocol.SUCCESS)
+    err = c.handleCommand(msgId, protocol.SUCCESS)
     return
 }

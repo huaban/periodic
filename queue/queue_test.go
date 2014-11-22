@@ -1,4 +1,4 @@
-package periodic
+package queue
 
 import (
     "container/heap"
