@@ -1,3 +1,4 @@
+/*
 Periodic Protocol
 -----------------
 
@@ -243,3 +244,6 @@ JOB_ASSIGN
 
     Arguments:
     - JSON byte job object.
+
+*/
+package protocol
