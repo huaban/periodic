@@ -80,58 +80,13 @@ runs the function `random_print`, and sends the job stat of that function back t
 As you can see, the client and worker APIs (along with the periodic server) deal with the job management and network communication so you can focus on the application parts.
 
 
-Install
--------
-
-### Install from binary
-
-    # for linux64
-    wget -O /usr/local/bin/periodic https://github.com/Lupino/periodic/releases/download/0.1.3/periodic
-
-    # for Mac osx
-    wget -O /usr/local/bin/periodic https://github.com/Lupino/periodic/releases/download/0.1.3/periodic-osx
-
-    # then
-    chown +x /usr/local/bin/periodic
-
-
-### install from source
-
-    $ go get -v github.com/Lupino/periodic/cmd/periodic
-
-### Show help
-
-    $ periodic -h
-    NAME:
-       periodic - Periodic task system
-
-    USAGE:
-       periodic [global options] command [command options] [arguments...]
-
-    VERSION:
-       0.1.3
-
-    COMMANDS:
-       status   Show status
-       submit   Submit job
-       drop     Drop func
-       run      Run func
-       help, h  Shows a list of commands or help for one command
-
-    GLOBAL OPTIONS:
-       -H 'unix:///tmp/periodic.sock'   the server address eg: tcp://127.0.0.1:5000 [$PERIODIC_PORT]
-       --redis 'tcp://127.0.0.1:6379'   The redis server address, required for driver redis
-       --driver 'leveldb'           The driver [leveldb, redis]
-       --dbpath 'leveldb'           The db path, required for driver leveldb
-       -d                   Enable daemon mode
-       --timeout '0'            The socket timeout
-       --cpus '4'               The runtime.GOMAXPROCS [$GOMAXPROCS]
-       --help, -h               show help
-       --version, -v            print the version
-
-
 Quick start
 ----------
+
+### Install
+
+    go get -v github.com/Lupino/periodic/cmd/periodic
+    periodic -h
 
 ### Start periodic server
 
