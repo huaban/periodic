@@ -115,6 +115,8 @@ func (sched *Sched) handleConnection(conn net.Conn) {
     c := protocol.NewServerConn(conn)
     payload, err := c.Receive()
     if err != nil {
+        httpclient := newHttpClient(sched, c)
+        go httpclient.handle(payload)
         return
     }
     switch protocol.ClientType(payload[0]) {
