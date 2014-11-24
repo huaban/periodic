@@ -123,3 +123,12 @@ Periodic clients
 * [node-periodic](https://github.com/Lupino/node-periodic)
 * [python-aio-periodic](https://github.com/Lupino/python-aio-periodic)
 * write you owne client see [protocol](https://godoc.org/github.com/Lupino/periodic/protocol).
+* http client api.
+```
+curl http://ip:port                      # Show the status of periodic
+curl http://ip:port/[funcName]           # Show the status of a func
+curl -X DELETE http://ip:port/[funcName] # delete the func
+
+curl -d func=[funcName] -d name=[jobName] -d args=[jobArgs] -d timeout=[timeout] -d sched_at=[schedAt] http://ip:port # submit a job
+curl -d name=[jobName] -d args=[jobArgs] -d timeout=[timeout] -d sched_at=[schedAt] http://ip:port/[funcName]         # submit a job
+```
