@@ -13,7 +13,7 @@ func TestHeader(t *testing.T) {
     if err != nil {
         t.Fatal(err)
     }
-    fmt.Printf("%s\n", header)
+    fmt.Printf("%v\n", header)
     var lengthGot = parseHeader(header)
 
     if lengthGot != length {
