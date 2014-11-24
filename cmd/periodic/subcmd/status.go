@@ -15,7 +15,7 @@ func ShowStatus(entryPoint string) {
     if err != nil {
         log.Fatal(err)
     }
-    conn := protocol.Conn{Conn: c}
+    conn := protocol.NewClientConn(c)
     defer conn.Close()
     err = conn.Send(protocol.TYPE_CLIENT.Bytes())
     if err != nil {

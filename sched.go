@@ -112,7 +112,7 @@ func (sched *Sched) resetRevertTimer(d time.Duration) {
 
 
 func (sched *Sched) handleConnection(conn net.Conn) {
-    c := protocol.Conn{Conn: conn}
+    c := protocol.NewServerConn(conn)
     payload, err := c.Receive()
     if err != nil {
         return

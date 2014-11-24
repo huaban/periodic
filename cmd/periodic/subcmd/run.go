@@ -30,7 +30,7 @@ func Run(entryPoint, Func, cmd string) {
             time.Sleep(5 * time.Second)
             continue
         }
-        conn := protocol.Conn{Conn: c}
+        conn := protocol.NewClientConn(c)
         err = handleWorker(conn, Func, cmd)
         if err != nil {
             if err != io.EOF {

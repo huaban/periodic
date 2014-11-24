@@ -42,6 +42,9 @@ Requests and responses are encapsulated by a binary packet. A binary
 packet consists of a header which is optionally followed by data. The
 header is:
 
+    4 byte magic code   - This is either "\0REQ" for requests or "\0RES"
+                          for responses.
+
     4 byte size         - A big-endian (network-order) integer containing
                           the size of the data being sent.
 
