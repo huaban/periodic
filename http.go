@@ -67,7 +67,7 @@ func (c *httpClient) sendResponse(status string, body []byte) {
     buf := bytes.NewBuffer(nil)
     buf.WriteString("HTTP/1.1 " + status + "\r\n")
     buf.WriteString("Content-Type: application/json; charset=utf-8\r\n")
-    buf.WriteString("Server: periodic/0.1.4\r\n")
+    buf.WriteString("Server: periodic/" + Version + "\r\n")
     length := len(body)
     if length > 0 {
         buf.WriteString("Content-Length: " + strconv.Itoa(length) + "\r\n")

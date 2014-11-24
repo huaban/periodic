@@ -20,7 +20,7 @@ func main() {
     app := cli.NewApp()
     app.Name = "periodic"
     app.Usage = "Periodic task system"
-    app.Version = "0.1.4"
+    app.Version = periodic.Version
     app.Flags = []cli.Flag {
         cli.StringFlag{
             Name: "H",
