@@ -1,6 +1,7 @@
 package periodic
 
 import (
+    "io"
     "log"
     "net"
     "time"
@@ -126,8 +127,10 @@ func (sched *Sched) handleConnection(conn net.Conn) {
         return
     }
     if err != nil {
-        log.Printf("Connection Error: %v, %v\n", err, payload)
-        c.Close()
+        if err != io.EOF {
+            log.Printf("Connection Error: %v, %v\n", err, payload)
+            c.Close()
+        }
         return
     }
     switch protocol.ClientType(payload[0]) {
