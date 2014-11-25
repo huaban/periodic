@@ -5,6 +5,7 @@ import (
     "net"
     "time"
     "sync"
+    "bytes"
     "strings"
     "container/heap"
     "github.com/Lupino/periodic/stat"
@@ -82,7 +83,7 @@ func (sched *Sched) Serve() {
         if sched.timeout > 0 {
             conn.SetDeadline(time.Now().Add(sched.timeout * time.Second))
         }
-        sched.handleConnection(conn)
+        go sched.handleConnection(conn)
     }
 }
 
@@ -114,19 +115,29 @@ func (sched *Sched) resetRevertTimer(d time.Duration) {
 func (sched *Sched) handleConnection(conn net.Conn) {
     c := protocol.NewServerConn(conn)
     payload, err := c.Receive()
+    if len(payload) == 4 {
+        if bytes.Contains([]byte("GET ,POST,DELETE,PUT "), payload) {
+            httpclient := newHttpClient(sched, c)
+            httpclient.handle(payload)
+        } else {
+            log.Printf("Unsupport protocol %v\n", payload)
+            c.Close()
+        }
+        return
+    }
     if err != nil {
-        httpclient := newHttpClient(sched, c)
-        go httpclient.handle(payload)
+        log.Printf("Connection Error: %v, %v\n", err, payload)
+        c.Close()
         return
     }
     switch protocol.ClientType(payload[0]) {
     case protocol.TYPE_CLIENT:
         client := newClient(sched, c)
-        go client.handle()
+        client.handle()
         break
     case protocol.TYPE_WORKER:
         w := newWorker(sched, c)
-        go w.handle()
+        w.handle()
         break
     default:
         log.Printf("Unsupport client %d\n", payload[0])

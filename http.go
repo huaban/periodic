@@ -36,6 +36,7 @@ func (c *httpClient) handle(header []byte) {
         buf := make([]byte, bufSize)
         n, err := c.conn.Read(buf)
         if err != nil {
+            c.sendErrResponse(err)
             return
         }
         writer.Write(buf)
