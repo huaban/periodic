@@ -131,4 +131,6 @@ curl -X DELETE http://ip:port/[funcName] # delete the func
 
 curl -d func=[funcName] -d name=[jobName] -d args=[jobArgs] -d timeout=[timeout] -d sched_at=[schedAt] http://ip:port # submit a job
 curl -d name=[jobName] -d args=[jobArgs] -d timeout=[timeout] -d sched_at=[schedAt] http://ip:port/[funcName]         # submit a job
+curl -d name=[jobName] -d act=remove http://ip:port/[funcName]                     # remove a job
+curl -d name=[jobName] -d func=[funcName] -d act=remove http://ip:port/[funcName]  # remove a job
 ```

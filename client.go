@@ -59,6 +59,9 @@ func (c *client) handle() {
         case protocol.DROP_FUNC:
             err = c.handleDropFunc(msgId, payload)
             break
+        case protocol.REMOVE_JOB:
+            err = c.handleRemoveJob(msgId, payload)
+            break
         default:
             err = c.handleCommand(msgId, protocol.UNKNOWN)
             break
@@ -164,5 +167,39 @@ func (c *client) handleDropFunc(msgId []byte, payload []byte) (err error) {
         delete(c.sched.jobPQ, Func)
     }
     err = c.handleCommand(msgId, protocol.SUCCESS)
+    return
+}
+
+func (c *client) handleRemoveJob(msgId, payload []byte) (err error) {
+    var job driver.Job
+    var e error
+    var conn = c.conn
+    var sched = c.sched
+    defer sched.jobLocker.Unlock()
+    sched.jobLocker.Lock()
+    job, e = driver.NewJob(payload)
+    if e != nil {
+        err = conn.Send([]byte(e.Error()))
+        return
+    }
+    job, e = sched.driver.GetOne(job.Func, job.Name)
+    if e == nil && job.Id > 0 {
+        if _, ok := sched.procQueue[job.Id]; ok {
+            delete(sched.procQueue, job.Id)
+        }
+        sched.driver.Delete(job.Id)
+        sched.decrStatJob(job)
+        if job.Status == driver.JOB_STATUS_PROC {
+            sched.decrStatProc(job)
+            sched.removeRevertPQ(job)
+        }
+        sched.notifyJobTimer()
+    }
+
+    if e != nil {
+        err = conn.Send([]byte(e.Error()))
+    } else {
+        err = c.handleCommand(msgId, protocol.SUCCESS)
+    }
     return
 }

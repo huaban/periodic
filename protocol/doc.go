@@ -70,6 +70,7 @@ header is:
                         14  STATUS        Client
                         15  DROP_FUNC     Client
                         16  SUCCESS       Client/Worker
+                        17  REMOVE        Client
 
 
 Arguments given in the data part are separated by a NULL byte.
@@ -131,6 +132,14 @@ These request types may only be sent by a client:
 
         Arguments:
         - Function name.
+
+
+    REMOVE
+
+        Remove the undoning job, and respond with a SUCCESS packet.
+
+        Arguments:
+        - JSON byte job object.
 
 
 ## Client Responses

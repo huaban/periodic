@@ -5,6 +5,7 @@ import (
     "bufio"
     "bytes"
     "errors"
+    "strings"
     "strconv"
     "net/http"
     "encoding/json"
@@ -52,7 +53,12 @@ func (c *httpClient) handle(header []byte) {
         c.handleStatus(funcName)
         break
     case "POST":
-        c.handleSubmitJob(req)
+        act := req.FormValue("act")
+        if strings.ToLower(act) == "remove" {
+            c.handleRemoveJob(req)
+        } else {
+            c.handleSubmitJob(req)
+        }
         break
     case "DELETE":
         c.handleDropFunc(funcName)
@@ -193,4 +199,38 @@ func (c *httpClient) handleDropFunc(funcName string) {
     }
     c.sendResponse("200 OK", []byte("{\"msg\": \"" + protocol.SUCCESS.String() + "\"}"))
     return
+}
+
+
+func (c *httpClient) handleRemoveJob(req *http.Request) {
+    var job driver.Job
+    var e error
+    var sched = c.sched
+    defer sched.jobLocker.Unlock()
+    sched.jobLocker.Lock()
+    url := req.URL.String()
+    funcName := url[1:]
+    if funcName == "" {
+        funcName = req.FormValue("func")
+    }
+    name := req.FormValue("name")
+    job, e = sched.driver.GetOne(funcName, name)
+    if e == nil && job.Id > 0 {
+        if _, ok := sched.procQueue[job.Id]; ok {
+            delete(sched.procQueue, job.Id)
+        }
+        sched.driver.Delete(job.Id)
+        sched.decrStatJob(job)
+        if job.Status == driver.JOB_STATUS_PROC {
+            sched.decrStatProc(job)
+            sched.removeRevertPQ(job)
+        }
+        sched.notifyJobTimer()
+    }
+
+    if e != nil {
+        c.sendErrResponse(e)
+    } else {
+        c.sendResponse("200 OK", []byte("{\"msg\": \"" + protocol.SUCCESS.String() + "\"}"))
+    }
 }

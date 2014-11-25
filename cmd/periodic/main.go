@@ -120,6 +120,33 @@ func main() {
             },
         },
         {
+            Name: "remove",
+            Usage: "Remove job",
+            Flags: []cli.Flag {
+                cli.StringFlag{
+                    Name: "f",
+                    Value: "",
+                    Usage: "function name",
+                },
+                cli.StringFlag{
+                    Name: "n",
+                    Value: "",
+                    Usage: "job name",
+                },
+            },
+            Action: func(c *cli.Context) {
+                var job = driver.Job{
+                    Name: c.String("n"),
+                    Func: c.String("f"),
+                }
+                if len(job.Name) == 0 || len(job.Func) == 0 {
+                    cli.ShowCommandHelp(c, "remove")
+                    log.Fatal("Job name and func is require")
+                }
+                subcmd.RemoveJob(c.GlobalString("H"), job)
+            },
+        },
+        {
             Name: "drop",
             Usage: "Drop func",
             Flags: []cli.Flag {
