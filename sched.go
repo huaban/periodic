@@ -13,6 +13,7 @@ import (
     "github.com/Lupino/periodic/queue"
     "github.com/Lupino/periodic/driver"
     "github.com/Lupino/periodic/protocol"
+    "github.com/felixge/tcpkeepalive"
 )
 
 
@@ -61,8 +62,10 @@ func NewSched(entryPoint string, store driver.StoreDriver, timeout time.Duration
 
 func (sched *Sched) Serve() {
     parts := strings.SplitN(sched.entryPoint, "://", 2)
+    isTCP := true
     if parts[0] == "unix" {
         sockCheck(parts[1])
+        isTCP = false
     }
     sched.loadJobQueue()
     go sched.handleJobPQ()
@@ -83,6 +86,12 @@ func (sched *Sched) Serve() {
         }
         if sched.timeout > 0 {
             conn.SetDeadline(time.Now().Add(sched.timeout * time.Second))
+        }
+        if isTCP {
+            kaConn, _ := tcpkeepalive.EnableKeepAlive(conn)
+            kaConn.SetKeepAliveIdle(30*time.Second)
+            kaConn.SetKeepAliveCount(4)
+            kaConn.SetKeepAliveInterval(5*time.Second)
         }
         go sched.handleConnection(conn)
     }
