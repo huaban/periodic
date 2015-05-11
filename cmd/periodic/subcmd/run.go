@@ -126,12 +126,12 @@ func handleWorker(conn protocol.Conn, Func, cmd string) (err error) {
 
 
 func extraJob(payload []byte) (job driver.Job, jobHandle []byte, err error) {
-    parts := bytes.SplitN(payload, protocol.NULL_CHAR, 3)
-    if len(parts) != 3 {
+    parts := bytes.SplitN(payload, protocol.NULL_CHAR, 4)
+    if len(parts) != 4 {
         err = errors.New("Invalid payload " + string(payload))
         return
     }
-    job, err = driver.NewJob(parts[2])
-    jobHandle = parts[1]
+    job, err = driver.NewJob(parts[3])
+    jobHandle = parts[2]
     return
 }
