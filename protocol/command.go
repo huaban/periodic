@@ -44,41 +44,41 @@ func (c Command) Bytes() []byte {
 
 func (c Command) String() string {
     switch c {
-        case 0:
+        case NOOP:
             return "NOOP"
-        case 1:
+        case GRAB_JOB:
             return "GRAB_JOB"
-        case 2:
+        case SCHED_LATER:
             return "SCHED_LATER"
-        case 3:
+        case WORK_DONE:
             return "WORK_DONE"
-        case 4:
+        case WORK_FAIL:
             return "WORK_FAIL"
-        case 5:
+        case JOB_ASSIGN:
             return "JOB_ASSIGN"
-        case 6:
+        case NO_JOB:
             return "NO_JOB"
-        case 7:
+        case CAN_DO:
             return "CAN_DO"
-        case 8:
+        case CANT_DO:
             return "CANT_DO"
-        case 9:
+        case PING:
             return "PING"
-        case 10:
+        case PONG:
             return "PONG"
-        case 11:
+        case SLEEP:
             return "SLEEP"
-        case 12:
+        case UNKNOWN:
             return "UNKNOWN"
-        case 13:
+        case SUBMIT_JOB:
             return "SUBMIT_JOB"
-        case 14:
+        case STATUS:
             return "STATUS"
-        case 15:
+        case DROP_FUNC:
             return "DROP_FUNC"
-        case 16:
+        case SUCCESS:
             return "SUCCESS"
-        case 17:
+        case REMOVE_JOB:
             return "REMOVE_JOB"
     }
     panic("Unknow Command " + strconv.Itoa(int(c)))

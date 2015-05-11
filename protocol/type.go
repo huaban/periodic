@@ -25,9 +25,9 @@ func (c ClientType) Bytes() []byte {
 // to string `TYPE_CLIENT`, `TYPE_WORKER`.
 func (c ClientType) String() string {
     switch c {
-        case 1:
+        case TYPE_CLIENT:
             return "TYPE_CLIENT"
-        case 2:
+        case TYPE_WORKER:
             return "TYPE_WORKER"
     }
     panic("Unknow ClientType " + strconv.Itoa(int(c)))
