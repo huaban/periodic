@@ -24,10 +24,10 @@ func NewMemStroeDriver() *MemStoreDriver {
 }
 
 
-func (m *MemStoreDriver) Save(job *Job) (err error) {
+func (m *MemStoreDriver) Save(job *Job, force ...bool) (err error) {
     defer m.locker.Unlock()
     m.locker.Lock()
-    if job.Id > 0 {
+    if job.Id > 0 && (len(force) == 0 || !force[0]) {
         old, ok := m.data[job.Id]
         if !ok {
             return fmt.Errorf("Update Job %d fail, the job is not exists.", job.Id)

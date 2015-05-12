@@ -141,6 +141,21 @@ These request types may only be sent by a client:
         Arguments:
         - JSON byte job object.
 
+    DUMP
+
+        This is to dump the data to client.
+
+        Arguments:
+        - None.
+
+   LOAD
+
+        This is to Load the data to server.
+
+        Arguments:
+        - None.
+
+
 
 ## Client Responses
 

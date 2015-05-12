@@ -4,7 +4,7 @@ package driver
 
 type StoreDriver interface {
     // Save job. when job is exists update it, other create one.
-    Save(*Job) error
+    Save(*Job, ...bool) error
     // Delete a job with job id.
     Delete(jobId int64) error
     // Get a job with job id.

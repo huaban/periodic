@@ -58,14 +58,14 @@ func (r RedisDriver) get(jobId int64) (job driver.Job, err error) {
 }
 
 
-func (r RedisDriver) Save(job *driver.Job) (err error) {
+func (r RedisDriver) Save(job *driver.Job, force ...bool) (err error) {
     defer r.RWLocker.Unlock()
     r.RWLocker.Lock()
     var key string
     var prefix = REDIS_PREFIX + job.Func + ":"
     var conn = r.pool.Get()
     defer conn.Close()
-    if job.Id > 0 {
+    if job.Id > 0 && (len(force) == 0 || !force[0]) {
         old, e := r.get(job.Id)
         key = REDIS_PREFIX + strconv.FormatInt(job.Id, 10)
         if e != nil || old.Id < 1 {

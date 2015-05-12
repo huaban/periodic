@@ -53,7 +53,7 @@ func NewLevelDBDriver(dbpath string) LevelDBDriver {
 }
 
 
-func (l LevelDBDriver) Save(job *driver.Job) (err error) {
+func (l LevelDBDriver) Save(job *driver.Job, force ...bool) (err error) {
     defer l.RWLocker.Unlock()
     l.RWLocker.Lock()
     batch := new(leveldb.Batch)
@@ -73,7 +73,7 @@ func (l LevelDBDriver) Save(job *driver.Job) (err error) {
     if isNew {
         batch.Put([]byte(PRE_SEQUENCE + "JOB"), []byte(strId))
         batch.Put([]byte(PRE_JOB_FUNC + job.Func + ":" + job.Name), []byte(strId))
-    } else {
+    } else if len(force) == 0 || !force[0] {
         old, e := l.get(job.Id)
         if e != nil || old.Id == 0 {
             err = errors.New(fmt.Sprintf("Update Job %d fail, the old job is not exists.", job.Id))

@@ -30,7 +30,7 @@ func ParseCommand(payload []byte) (msgId []byte, cmd Command, data []byte) {
 // Framing:
 // In order to handle framing in Send/Recieve, as these give frame
 // boundaries we use a very simple 4 bytes header.
-func makeHeader(data []byte) ([]byte, error) {
+func MakeHeader(data []byte) ([]byte, error) {
     header := make([]byte, 4)
 
     length := uint32(len(data))
@@ -48,7 +48,7 @@ func makeHeader(data []byte) ([]byte, error) {
 }
 
 
-func parseHeader(header []byte) (uint32) {
+func ParseHeader(header []byte) (uint32) {
     length := uint32(header[0])<<24 | uint32(header[1])<<16 | uint32(header[2])<<8 | uint32(header[3])
     length = length & ^uint32(0x80000000)
 

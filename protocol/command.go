@@ -32,6 +32,8 @@ const (
     DROP_FUNC   // client
     SUCCESS     // server
     REMOVE_JOB  // client
+    DUMP        // client
+    LOAD        // client
 )
 
 
@@ -80,6 +82,8 @@ func (c Command) String() string {
             return "SUCCESS"
         case REMOVE_JOB:
             return "REMOVE_JOB"
+        case DUMP:
+            return "DUMP"
     }
     panic("Unknow Command " + strconv.Itoa(int(c)))
 }

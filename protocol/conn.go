@@ -52,7 +52,7 @@ func (conn *Conn) Receive() (rdata []byte, rerr error) {
         return nil, err
     }
 
-	length := parseHeader(header)
+	length := ParseHeader(header)
 
     rdata, rerr = conn.receive(length)
 
@@ -74,7 +74,7 @@ func (conn *Conn) receive(length uint32) ([]byte, error) {
 
 // Send a new message.
 func (conn *Conn) Send(data []byte) error {
-	header, err := makeHeader(data)
+	header, err := MakeHeader(data)
 	if err != nil {
 		return err
 	}

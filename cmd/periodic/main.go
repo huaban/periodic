@@ -194,6 +194,34 @@ func main() {
                 subcmd.Run(c.GlobalString("H"), Func, exec)
             },
         },
+        {
+            Name: "dump",
+            Usage: "Dump database to file.",
+            Flags: []cli.Flag {
+                cli.StringFlag{
+                    Name: "o",
+                    Value: "dump.db",
+                    Usage: "output file name required",
+                },
+            },
+            Action: func(c *cli.Context) {
+                subcmd.Dump(c.GlobalString("H"), c.String("o"))
+            },
+        },
+        {
+            Name: "load",
+            Usage: "Load file to database.",
+            Flags: []cli.Flag {
+                cli.StringFlag{
+                    Name: "i",
+                    Value: "dump.db",
+                    Usage: "input file name required",
+                },
+            },
+            Action: func(c *cli.Context) {
+                subcmd.Load(c.GlobalString("H"), c.String("i"))
+            },
+        },
     }
     app.Action = func(c *cli.Context) {
         if c.Bool("d") {
