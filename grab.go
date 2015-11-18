@@ -9,7 +9,7 @@ import (
 
 type grabItem struct {
 	w     *worker
-	msgId []byte
+	msgID []byte
 }
 
 func (item grabItem) has(Func string) bool {
@@ -22,7 +22,7 @@ func (item grabItem) has(Func string) bool {
 }
 
 func (item grabItem) equal(item1 grabItem) bool {
-	if item1.w == item.w && bytes.Equal(item.msgId, item1.msgId) {
+	if item1.w == item.w && bytes.Equal(item.msgID, item1.msgID) {
 		return true
 	}
 	return false

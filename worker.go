@@ -34,12 +34,12 @@ func (w *worker) IsAlive() bool {
 	return w.alive
 }
 
-func (w *worker) handleJobAssign(msgId []byte, job driver.Job) (err error) {
+func (w *worker) handleJobAssign(msgID []byte, job driver.Job) (err error) {
 	defer w.locker.Unlock()
 	w.locker.Lock()
 	w.jobQueue[job.Id] = job
 	buf := bytes.NewBuffer(nil)
-	buf.Write(msgId)
+	buf.Write(msgID)
 	buf.Write(protocol.NULL_CHAR)
 	buf.Write(protocol.JOB_ASSIGN.Bytes())
 	buf.Write(protocol.NULL_CHAR)
@@ -93,9 +93,9 @@ func (w *worker) handleFail(jobId int64) (err error) {
 	return nil
 }
 
-func (w *worker) handleCommand(msgId []byte, cmd protocol.Command) (err error) {
+func (w *worker) handleCommand(msgID []byte, cmd protocol.Command) (err error) {
 	buf := bytes.NewBuffer(nil)
-	buf.Write(msgId)
+	buf.Write(msgID)
 	buf.Write(protocol.NULL_CHAR)
 	buf.Write(cmd.Bytes())
 	err = w.conn.Send(buf.Bytes())
@@ -112,10 +112,10 @@ func (w *worker) handleSchedLater(jobId, delay int64) (err error) {
 	return nil
 }
 
-func (w *worker) handleGrabJob(msgId []byte) (err error) {
+func (w *worker) handleGrabJob(msgID []byte) (err error) {
 	item := grabItem{
 		w:     w,
-		msgId: msgId,
+		msgID: msgID,
 	}
 	w.sched.grabQueue.push(item)
 	w.sched.notifyJobTimer()
@@ -126,7 +126,7 @@ func (w *worker) handle() {
 	var payload []byte
 	var err error
 	var conn = w.conn
-	var msgId []byte
+	var msgID []byte
 	var cmd protocol.Command
 	defer func() {
 		if x := recover(); x != nil {
@@ -143,11 +143,11 @@ func (w *worker) handle() {
 			break
 		}
 
-		msgId, cmd, payload = protocol.ParseCommand(payload)
+		msgID, cmd, payload = protocol.ParseCommand(payload)
 
 		switch cmd {
 		case protocol.GRAB_JOB:
-			err = w.handleGrabJob(msgId)
+			err = w.handleGrabJob(msgID)
 			break
 		case protocol.WORK_DONE:
 			jobId, _ := strconv.ParseInt(string(payload), 10, 0)
@@ -168,10 +168,10 @@ func (w *worker) handle() {
 			err = w.handleSchedLater(jobId, delay)
 			break
 		case protocol.SLEEP:
-			err = w.handleCommand(msgId, protocol.NOOP)
+			err = w.handleCommand(msgID, protocol.NOOP)
 			break
 		case protocol.PING:
-			err = w.handleCommand(msgId, protocol.PONG)
+			err = w.handleCommand(msgID, protocol.PONG)
 			break
 		case protocol.CAN_DO:
 			err = w.handleCanDo(string(payload))
@@ -180,7 +180,7 @@ func (w *worker) handle() {
 			err = w.handleCanNoDo(string(payload))
 			break
 		default:
-			err = w.handleCommand(msgId, protocol.UNKNOWN)
+			err = w.handleCommand(msgID, protocol.UNKNOWN)
 			break
 		}
 		if err != nil {

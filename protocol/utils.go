@@ -9,14 +9,14 @@ import (
 // Split the message payload
 var NULL_CHAR = []byte("\x00\x01")
 
-// Parse command payload to extract msgId cmd and data
-func ParseCommand(payload []byte) (msgId []byte, cmd Command, data []byte) {
+// Parse command payload to extract msgID cmd and data
+func ParseCommand(payload []byte) (msgID []byte, cmd Command, data []byte) {
 	parts := bytes.SplitN(payload, NULL_CHAR, 3)
 	var err = fmt.Sprintf("InvalId %v\n", payload)
 	if len(parts) == 1 {
 		panic(err)
 	}
-	msgId = parts[0]
+	msgID = parts[0]
 	if len(parts[1]) != 1 {
 		panic(err)
 	}

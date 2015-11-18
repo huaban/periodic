@@ -23,9 +23,9 @@ func ShowStatus(entryPoint string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	var msgId = []byte("100")
+	var msgID = []byte("100")
 	buf := bytes.NewBuffer(nil)
-	buf.Write(msgId)
+	buf.Write(msgID)
 	buf.Write(protocol.NULL_CHAR)
 	buf.Write(protocol.STATUS.Bytes())
 	err = conn.Send(buf.Bytes())

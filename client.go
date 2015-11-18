@@ -24,7 +24,7 @@ func newClient(sched *Sched, conn protocol.Conn) (c *client) {
 func (c *client) handle() {
 	var payload []byte
 	var err error
-	var msgId []byte
+	var msgID []byte
 	var cmd protocol.Command
 	var conn = c.conn
 	defer func() {
@@ -42,32 +42,32 @@ func (c *client) handle() {
 			return
 		}
 
-		msgId, cmd, payload = protocol.ParseCommand(payload)
+		msgID, cmd, payload = protocol.ParseCommand(payload)
 
 		switch cmd {
 		case protocol.SUBMIT_JOB:
-			err = c.handleSubmitJob(msgId, payload)
+			err = c.handleSubmitJob(msgID, payload)
 			break
 		case protocol.STATUS:
-			err = c.handleStatus(msgId)
+			err = c.handleStatus(msgID)
 			break
 		case protocol.PING:
-			err = c.handleCommand(msgId, protocol.PONG)
+			err = c.handleCommand(msgID, protocol.PONG)
 			break
 		case protocol.DROP_FUNC:
-			err = c.handleDropFunc(msgId, payload)
+			err = c.handleDropFunc(msgID, payload)
 			break
 		case protocol.REMOVE_JOB:
-			err = c.handleRemoveJob(msgId, payload)
+			err = c.handleRemoveJob(msgID, payload)
 			break
 		case protocol.DUMP:
-			err = c.handleDump(msgId)
+			err = c.handleDump(msgID)
 			break
 		case protocol.LOAD:
-			err = c.handleLoad(msgId, payload)
+			err = c.handleLoad(msgID, payload)
 			break
 		default:
-			err = c.handleCommand(msgId, protocol.UNKNOWN)
+			err = c.handleCommand(msgID, protocol.UNKNOWN)
 			break
 		}
 		if err != nil {
@@ -79,16 +79,16 @@ func (c *client) handle() {
 	}
 }
 
-func (c *client) handleCommand(msgId []byte, cmd protocol.Command) (err error) {
+func (c *client) handleCommand(msgID []byte, cmd protocol.Command) (err error) {
 	buf := bytes.NewBuffer(nil)
-	buf.Write(msgId)
+	buf.Write(msgID)
 	buf.Write(protocol.NULL_CHAR)
 	buf.Write(cmd.Bytes())
 	err = c.conn.Send(buf.Bytes())
 	return
 }
 
-func (c *client) handleSubmitJob(msgId []byte, payload []byte) (err error) {
+func (c *client) handleSubmitJob(msgID []byte, payload []byte) (err error) {
 	var job driver.Job
 	var e error
 	var conn = c.conn
@@ -126,13 +126,13 @@ func (c *client) handleSubmitJob(msgId []byte, payload []byte) (err error) {
 		sched.pushJobPQ(job)
 	}
 	sched.notifyJobTimer()
-	err = c.handleCommand(msgId, protocol.SUCCESS)
+	err = c.handleCommand(msgID, protocol.SUCCESS)
 	return
 }
 
-func (c *client) handleStatus(msgId []byte) (err error) {
+func (c *client) handleStatus(msgID []byte) (err error) {
 	buf := bytes.NewBuffer(nil)
-	buf.Write(msgId)
+	buf.Write(msgID)
 	buf.Write(protocol.NULL_CHAR)
 	for _, stat := range c.sched.stats {
 		buf.WriteString(stat.String())
@@ -142,7 +142,7 @@ func (c *client) handleStatus(msgId []byte) (err error) {
 	return
 }
 
-func (c *client) handleDropFunc(msgId []byte, payload []byte) (err error) {
+func (c *client) handleDropFunc(msgID []byte, payload []byte) (err error) {
 	Func := string(payload)
 	stat, ok := c.sched.stats[Func]
 	sched := c.sched
@@ -166,11 +166,11 @@ func (c *client) handleDropFunc(msgId []byte, payload []byte) (err error) {
 		delete(c.sched.stats, Func)
 		delete(c.sched.jobPQ, Func)
 	}
-	err = c.handleCommand(msgId, protocol.SUCCESS)
+	err = c.handleCommand(msgID, protocol.SUCCESS)
 	return
 }
 
-func (c *client) handleRemoveJob(msgId, payload []byte) (err error) {
+func (c *client) handleRemoveJob(msgID, payload []byte) (err error) {
 	var job driver.Job
 	var e error
 	var conn = c.conn
@@ -199,12 +199,12 @@ func (c *client) handleRemoveJob(msgId, payload []byte) (err error) {
 	if e != nil {
 		err = conn.Send([]byte(e.Error()))
 	} else {
-		err = c.handleCommand(msgId, protocol.SUCCESS)
+		err = c.handleCommand(msgID, protocol.SUCCESS)
 	}
 	return
 }
 
-func (c *client) handleDump(msgId []byte) (err error) {
+func (c *client) handleDump(msgID []byte) (err error) {
 	var sched = c.sched
 	var batchSize = 100
 	var offset = 0
@@ -228,7 +228,7 @@ func (c *client) handleDump(msgId []byte) (err error) {
 
 		if offset == batchSize {
 			offset = 0
-			if err = c.handleJobList(msgId, jobList); err != nil {
+			if err = c.handleJobList(msgID, jobList); err != nil {
 				return
 			}
 		}
@@ -237,22 +237,22 @@ func (c *client) handleDump(msgId []byte) (err error) {
 	iter.Close()
 
 	if offset > 0 {
-		if err = c.handleJobList(msgId, jobList); err != nil {
+		if err = c.handleJobList(msgID, jobList); err != nil {
 			return
 		}
 	}
 
 	buffer := bytes.NewBuffer(nil)
-	buffer.Write(msgId)
+	buffer.Write(msgID)
 	buffer.Write(protocol.NULL_CHAR)
 	buffer.WriteString("EOF")
 	err = c.conn.Send(buffer.Bytes())
 	return
 }
 
-func (c *client) handleJobList(msgId []byte, jobList []driver.Job) (err error) {
+func (c *client) handleJobList(msgID []byte, jobList []driver.Job) (err error) {
 	buffer := bytes.NewBuffer(nil)
-	buffer.Write(msgId)
+	buffer.Write(msgID)
 	buffer.Write(protocol.NULL_CHAR)
 	data, _ := json.Marshal(map[string][]driver.Job{"jobs": jobList})
 	buffer.Write(data)
@@ -260,7 +260,7 @@ func (c *client) handleJobList(msgId []byte, jobList []driver.Job) (err error) {
 	return
 }
 
-func (c *client) handleLoad(msgId, payload []byte) (err error) {
+func (c *client) handleLoad(msgID, payload []byte) (err error) {
 	var packed map[string][]driver.Job
 	if err = json.Unmarshal(payload, &packed); err != nil {
 		return

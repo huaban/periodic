@@ -182,7 +182,7 @@ func (sched *Sched) submitJob(item grabItem, job driver.Job) bool {
 	if !item.w.alive {
 		return false
 	}
-	if err := item.w.handleJobAssign(item.msgId, job); err != nil {
+	if err := item.w.handleJobAssign(item.msgID, job); err != nil {
 		item.w.alive = false
 		return false
 	}

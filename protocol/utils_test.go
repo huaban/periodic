@@ -30,8 +30,8 @@ func testPanic() {
 
 func TestParseCommand(t *testing.T) {
 	var pack = []byte("100\x00\x01\x01\x00\x01hhcc")
-	var msgId, cmd, data = ParseCommand(pack)
-	fmt.Printf("%d, %d, %s\n", msgId, cmd, data)
+	var msgID, cmd, data = ParseCommand(pack)
+	fmt.Printf("%d, %d, %s\n", msgID, cmd, data)
 }
 
 func TestParseCommandPanic1(t *testing.T) {

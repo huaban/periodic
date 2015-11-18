@@ -22,9 +22,9 @@ func SubmitJob(entryPoint string, job driver.Job) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	var msgId = []byte("100")
+	var msgID = []byte("100")
 	buf := bytes.NewBuffer(nil)
-	buf.Write(msgId)
+	buf.Write(msgID)
 	buf.Write(protocol.NULL_CHAR)
 	buf.WriteByte(byte(protocol.SUBMIT_JOB))
 	buf.Write(protocol.NULL_CHAR)

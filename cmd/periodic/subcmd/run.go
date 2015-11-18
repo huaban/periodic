@@ -44,9 +44,9 @@ func handleWorker(conn protocol.Conn, Func, cmd string) (err error) {
 	if err != nil {
 		return
 	}
-	var msgId = []byte("100")
+	var msgID = []byte("100")
 	buf := bytes.NewBuffer(nil)
-	buf.Write(msgId)
+	buf.Write(msgID)
 	buf.Write(protocol.NULL_CHAR)
 	buf.WriteByte(byte(protocol.CAN_DO))
 	buf.Write(protocol.NULL_CHAR)
@@ -61,7 +61,7 @@ func handleWorker(conn protocol.Conn, Func, cmd string) (err error) {
 	var jobHandle []byte
 	for {
 		buf = bytes.NewBuffer(nil)
-		buf.Write(msgId)
+		buf.Write(msgID)
 		buf.Write(protocol.NULL_CHAR)
 		buf.Write(protocol.GRAB_JOB.Bytes())
 		err = conn.Send(buf.Bytes())
@@ -99,7 +99,7 @@ func handleWorker(conn protocol.Conn, Func, cmd string) (err error) {
 			}
 		}
 		buf = bytes.NewBuffer(nil)
-		buf.Write(msgId)
+		buf.Write(msgID)
 		buf.Write(protocol.NULL_CHAR)
 		if err != nil || fail {
 			buf.WriteByte(byte(protocol.WORK_FAIL))

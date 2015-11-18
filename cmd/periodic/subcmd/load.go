@@ -30,7 +30,7 @@ func Load(entryPoint, input string) {
 
 	defer fp.Close()
 
-	var msgId = []byte("100")
+	var msgID = []byte("100")
 	for {
 		payload, err := readPatch(fp)
 		if err != nil {
@@ -41,7 +41,7 @@ func Load(entryPoint, input string) {
 		}
 
 		buf := bytes.NewBuffer(nil)
-		buf.Write(msgId)
+		buf.Write(msgID)
 		buf.Write(protocol.NULL_CHAR)
 		buf.Write(protocol.LOAD.Bytes())
 		buf.Write(protocol.NULL_CHAR)
