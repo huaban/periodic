@@ -43,11 +43,11 @@ func (m *MemStoreDriver) Save(job *Job, force ...bool) (err error) {
 	return
 }
 
-func (m *MemStoreDriver) Delete(jobId int64) (err error) {
+func (m *MemStoreDriver) Delete(jobID int64) (err error) {
 	defer m.locker.Unlock()
 	m.locker.Lock()
 	var job Job
-	job, err = m.Get(jobId)
+	job, err = m.Get(jobID)
 	if err != nil {
 		return
 	}
@@ -56,10 +56,10 @@ func (m *MemStoreDriver) Delete(jobId int64) (err error) {
 	return
 }
 
-func (m *MemStoreDriver) Get(jobId int64) (job Job, err error) {
-	j, ok := m.data[jobId]
+func (m *MemStoreDriver) Get(jobID int64) (job Job, err error) {
+	j, ok := m.data[jobID]
 	if !ok {
-		err = fmt.Errorf("Job %d not exists.", jobId)
+		err = fmt.Errorf("Job %d not exists.", jobID)
 		return
 	}
 	job = *j
@@ -67,12 +67,12 @@ func (m *MemStoreDriver) Get(jobId int64) (job Job, err error) {
 }
 
 func (m *MemStoreDriver) GetOne(Func, name string) (job Job, err error) {
-	jobId, ok := m.nameIndex[Func+":"+name]
+	jobID, ok := m.nameIndex[Func+":"+name]
 	if !ok {
 		err = fmt.Errorf("Job %s:%s not exists.", Func, name)
 		return
 	}
-	job, err = m.Get(jobId)
+	job, err = m.Get(jobID)
 	return
 }
 
@@ -80,14 +80,14 @@ func (m *MemStoreDriver) NewIterator(Func []byte) JobIterator {
 	m.locker.Lock()
 	var data = make([]int64, 0)
 	if Func == nil {
-		for jobId, _ := range m.data {
-			data = append(data, jobId)
+		for jobID, _ := range m.data {
+			data = append(data, jobID)
 		}
 	} else {
 		prefix := string(Func)
-		for key, jobId := range m.nameIndex {
+		for key, jobID := range m.nameIndex {
 			if strings.HasPrefix(key, prefix) {
-				data = append(data, jobId)
+				data = append(data, jobID)
 			}
 		}
 	}

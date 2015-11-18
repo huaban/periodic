@@ -33,11 +33,11 @@ func NewRedisDriver(server string) RedisDriver {
 	return RedisDriver{pool: pool, cache: cache, RWLocker: RWLocker}
 }
 
-func (r RedisDriver) get(jobId int64) (job driver.Job, err error) {
+func (r RedisDriver) get(jobID int64) (job driver.Job, err error) {
 	var data []byte
 	var conn = r.pool.Get()
 	defer conn.Close()
-	var key = REDIS_PREFIX + strconv.FormatInt(jobId, 10)
+	var key = REDIS_PREFIX + strconv.FormatInt(jobID, 10)
 	if val, hit := r.cache.Get(key); hit {
 		return val.(driver.Job), nil
 	}
@@ -96,11 +96,11 @@ func (r RedisDriver) Save(job *driver.Job, force ...bool) (err error) {
 	return
 }
 
-func (r RedisDriver) Delete(jobId int64) (err error) {
+func (r RedisDriver) Delete(jobID int64) (err error) {
 	defer r.RWLocker.Unlock()
 	r.RWLocker.Lock()
-	var key = REDIS_PREFIX + strconv.FormatInt(jobId, 10)
-	job, e := r.get(jobId)
+	var key = REDIS_PREFIX + strconv.FormatInt(jobID, 10)
+	job, e := r.get(jobID)
 	if e != nil {
 		return e
 	}
@@ -116,10 +116,10 @@ func (r RedisDriver) Delete(jobId int64) (err error) {
 	return
 }
 
-func (r RedisDriver) Get(jobId int64) (job driver.Job, err error) {
+func (r RedisDriver) Get(jobID int64) (job driver.Job, err error) {
 	defer r.RWLocker.Unlock()
 	r.RWLocker.Lock()
-	job, err = r.get(jobId)
+	job, err = r.get(jobID)
 	return
 }
 
@@ -128,9 +128,9 @@ func (r RedisDriver) GetOne(Func string, jobName string) (job driver.Job, err er
 	r.RWLocker.Lock()
 	var conn = r.pool.Get()
 	defer conn.Close()
-	jobId, _ := redis.Int64(conn.Do("ZSCORE", REDIS_PREFIX+Func+":name", jobName))
-	if jobId > 0 {
-		return r.get(jobId)
+	jobID, _ := redis.Int64(conn.Do("ZSCORE", REDIS_PREFIX+Func+":name", jobName))
+	if jobID > 0 {
+		return r.get(jobID)
 	}
 	return
 }
@@ -185,12 +185,12 @@ func (iter *RedisIterator) Next() bool {
 	if err != nil || len(reply) == 0 {
 		return false
 	}
-	var jobId int64
+	var jobID int64
 	jobs := make([]driver.Job, len(reply)/2)
 	for k, v := range reply {
 		if k%2 == 1 {
-			jobId, _ = strconv.ParseInt(string(v.([]byte)), 10, 0)
-			jobs[(k-1)/2], _ = iter.r.get(jobId)
+			jobID, _ = strconv.ParseInt(string(v.([]byte)), 10, 0)
+			jobs[(k-1)/2], _ = iter.r.get(jobID)
 		}
 	}
 	iter.cacheJob = jobs

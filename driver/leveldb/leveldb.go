@@ -85,12 +85,12 @@ func (l LevelDBDriver) Save(job *driver.Job, force ...bool) (err error) {
 	return
 }
 
-func (l LevelDBDriver) Delete(jobId int64) (err error) {
+func (l LevelDBDriver) Delete(jobID int64) (err error) {
 	defer l.RWLocker.Unlock()
 	l.RWLocker.Lock()
 	var job driver.Job
 	batch := new(leveldb.Batch)
-	job, err = l.get(jobId)
+	job, err = l.get(jobID)
 	if err != nil {
 		return
 	}
@@ -102,15 +102,15 @@ func (l LevelDBDriver) Delete(jobId int64) (err error) {
 	return
 }
 
-func (l LevelDBDriver) Get(jobId int64) (driver.Job, error) {
+func (l LevelDBDriver) Get(jobID int64) (driver.Job, error) {
 	defer l.RWLocker.Unlock()
 	l.RWLocker.Lock()
-	return l.get(jobId)
+	return l.get(jobID)
 }
 
-func (l LevelDBDriver) get(jobId int64) (job driver.Job, err error) {
+func (l LevelDBDriver) get(jobID int64) (job driver.Job, err error) {
 	var data []byte
-	var key = PRE_JOB + strconv.FormatInt(jobId, 10)
+	var key = PRE_JOB + strconv.FormatInt(jobID, 10)
 	if val, hit := l.cache.Get(key); hit {
 		return val.(driver.Job), nil
 	}
@@ -186,8 +186,8 @@ func (iter *LevelDBIterator) Value() (job driver.Job) {
 		job, _ = driver.NewJob(data)
 		return
 	}
-	jobId, _ := strconv.ParseInt(string(data), 10, 64)
-	job, _ = iter.l.get(jobId)
+	jobID, _ := strconv.ParseInt(string(data), 10, 64)
+	job, _ = iter.l.get(jobID)
 	return
 }
 

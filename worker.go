@@ -73,22 +73,22 @@ func (w *worker) handleCanNoDo(Func string) error {
 	return nil
 }
 
-func (w *worker) handleDone(jobId int64) (err error) {
-	w.sched.done(jobId)
+func (w *worker) handleDone(jobID int64) (err error) {
+	w.sched.done(jobID)
 	defer w.locker.Unlock()
 	w.locker.Lock()
-	if _, ok := w.jobQueue[jobId]; ok {
-		delete(w.jobQueue, jobId)
+	if _, ok := w.jobQueue[jobID]; ok {
+		delete(w.jobQueue, jobID)
 	}
 	return nil
 }
 
-func (w *worker) handleFail(jobId int64) (err error) {
-	w.sched.fail(jobId)
+func (w *worker) handleFail(jobID int64) (err error) {
+	w.sched.fail(jobID)
 	defer w.locker.Unlock()
 	w.locker.Lock()
-	if _, ok := w.jobQueue[jobId]; ok {
-		delete(w.jobQueue, jobId)
+	if _, ok := w.jobQueue[jobID]; ok {
+		delete(w.jobQueue, jobID)
 	}
 	return nil
 }
@@ -102,12 +102,12 @@ func (w *worker) handleCommand(msgID []byte, cmd protocol.Command) (err error) {
 	return
 }
 
-func (w *worker) handleSchedLater(jobId, delay int64) (err error) {
-	w.sched.schedLater(jobId, delay)
+func (w *worker) handleSchedLater(jobID, delay int64) (err error) {
+	w.sched.schedLater(jobID, delay)
 	defer w.locker.Unlock()
 	w.locker.Lock()
-	if _, ok := w.jobQueue[jobId]; ok {
-		delete(w.jobQueue, jobId)
+	if _, ok := w.jobQueue[jobID]; ok {
+		delete(w.jobQueue, jobID)
 	}
 	return nil
 }
@@ -150,12 +150,12 @@ func (w *worker) handle() {
 			err = w.handleGrabJob(msgID)
 			break
 		case protocol.WORK_DONE:
-			jobId, _ := strconv.ParseInt(string(payload), 10, 0)
-			err = w.handleDone(jobId)
+			jobID, _ := strconv.ParseInt(string(payload), 10, 0)
+			err = w.handleDone(jobID)
 			break
 		case protocol.WORK_FAIL:
-			jobId, _ := strconv.ParseInt(string(payload), 10, 0)
-			err = w.handleFail(jobId)
+			jobID, _ := strconv.ParseInt(string(payload), 10, 0)
+			err = w.handleFail(jobID)
 			break
 		case protocol.SCHED_LATER:
 			parts := bytes.SplitN(payload, protocol.NULL_CHAR, 2)
@@ -163,9 +163,9 @@ func (w *worker) handle() {
 				log.Printf("Error: invalid format.")
 				break
 			}
-			jobId, _ := strconv.ParseInt(string(parts[0]), 10, 0)
+			jobID, _ := strconv.ParseInt(string(parts[0]), 10, 0)
 			delay, _ := strconv.ParseInt(string(parts[1]), 10, 0)
-			err = w.handleSchedLater(jobId, delay)
+			err = w.handleSchedLater(jobID, delay)
 			break
 		case protocol.SLEEP:
 			err = w.handleCommand(msgID, protocol.NOOP)

@@ -150,17 +150,17 @@ func (sched *Sched) handleConnection(conn net.Conn) {
 	}
 }
 
-func (sched *Sched) done(jobId int64) {
+func (sched *Sched) done(jobID int64) {
 	defer sched.notifyJobTimer()
 	defer sched.notifyRevertTimer()
 	defer sched.jobLocker.Unlock()
 	sched.jobLocker.Lock()
-	if _, ok := sched.procQueue[jobId]; ok {
-		delete(sched.procQueue, jobId)
+	if _, ok := sched.procQueue[jobID]; ok {
+		delete(sched.procQueue, jobID)
 	}
-	job, err := sched.driver.Get(jobId)
+	job, err := sched.driver.Get(jobID)
 	if err == nil {
-		sched.driver.Delete(jobId)
+		sched.driver.Delete(jobID)
 		sched.decrStatJob(job)
 		sched.decrStatProc(job)
 		sched.removeRevertPQ(job)
@@ -367,15 +367,15 @@ func (sched *Sched) handleRevertPQ() {
 	}
 }
 
-func (sched *Sched) fail(jobId int64) {
+func (sched *Sched) fail(jobID int64) {
 	defer sched.notifyJobTimer()
 	defer sched.notifyRevertTimer()
 	defer sched.jobLocker.Unlock()
 	sched.jobLocker.Lock()
-	if _, ok := sched.procQueue[jobId]; ok {
-		delete(sched.procQueue, jobId)
+	if _, ok := sched.procQueue[jobID]; ok {
+		delete(sched.procQueue, jobID)
 	}
-	job, _ := sched.driver.Get(jobId)
+	job, _ := sched.driver.Get(jobID)
 	sched.decrStatProc(job)
 	sched.removeRevertPQ(job)
 	job.Status = driver.JOB_STATUS_READY
@@ -429,15 +429,15 @@ func (sched *Sched) decrStatProc(job driver.Job) {
 	}
 }
 
-func (sched *Sched) schedLater(jobId int64, delay int64) {
+func (sched *Sched) schedLater(jobID int64, delay int64) {
 	defer sched.notifyJobTimer()
 	defer sched.notifyRevertTimer()
 	defer sched.jobLocker.Unlock()
 	sched.jobLocker.Lock()
-	if _, ok := sched.procQueue[jobId]; ok {
-		delete(sched.procQueue, jobId)
+	if _, ok := sched.procQueue[jobID]; ok {
+		delete(sched.procQueue, jobID)
 	}
-	job, _ := sched.driver.Get(jobId)
+	job, _ := sched.driver.Get(jobID)
 	sched.decrStatProc(job)
 	sched.removeRevertPQ(job)
 	job.Status = driver.JOB_STATUS_READY

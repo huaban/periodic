@@ -160,8 +160,8 @@ func (c *client) handleDropFunc(msgID []byte, payload []byte) (err error) {
 			deleteJob = append(deleteJob, job.Id)
 		}
 		iter.Close()
-		for _, jobId := range deleteJob {
-			sched.driver.Delete(jobId)
+		for _, jobID := range deleteJob {
+			sched.driver.Delete(jobID)
 		}
 		delete(c.sched.stats, Func)
 		delete(c.sched.jobPQ, Func)

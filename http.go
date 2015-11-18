@@ -191,8 +191,8 @@ func (c *httpClient) handleDropFunc(funcName string) {
 			deleteJob = append(deleteJob, job.Id)
 		}
 		iter.Close()
-		for _, jobId := range deleteJob {
-			sched.driver.Delete(jobId)
+		for _, jobID := range deleteJob {
+			sched.driver.Delete(jobID)
 		}
 		delete(c.sched.stats, funcName)
 		delete(c.sched.jobPQ, funcName)

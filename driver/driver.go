@@ -6,9 +6,9 @@ type StoreDriver interface {
 	// Save job. when job is exists update it, other create one.
 	Save(*Job, ...bool) error
 	// Delete a job with job id.
-	Delete(jobId int64) error
+	Delete(jobID int64) error
 	// Get a job with job id.
-	Get(jobId int64) (Job, error)
+	Get(jobID int64) (Job, error)
 	// Get a job with func and name.
 	GetOne(string, string) (Job, error)
 	// Create a JobIterator with func or nil.
