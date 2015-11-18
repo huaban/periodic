@@ -4,12 +4,6 @@ import (
 	"encoding/json"
 )
 
-// Define job status.
-const (
-	JOB_STATUS_READY = "ready"
-	JOB_STATUS_PROC  = "processing"
-)
-
 // Job workload.
 type Job struct {
 	ID int64 `json:"job_id"`
@@ -26,6 +20,26 @@ type Job struct {
 	// The job is start at
 	RunAt  int64  `json:"run_at"`
 	Status string `json:"status"`
+}
+
+// IsReady check job status ready
+func (job Job) IsReady() bool {
+	return job.Status == "ready"
+}
+
+// IsProc check job status processing
+func (job Job) IsProc() bool {
+	return job.Status == "processing"
+}
+
+// SetReady set job status ready
+func (job *Job) SetReady() {
+	job.Status = "ready"
+}
+
+// SetProc set job status processing
+func (job *Job) SetProc() {
+	job.Status = "processing"
 }
 
 // NewJob create a job from json bytes

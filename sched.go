@@ -191,7 +191,7 @@ func (sched *Sched) submitJob(item grabItem, job driver.Job) bool {
 	}
 	now := time.Now()
 	current := int64(now.Unix())
-	job.Status = driver.JOB_STATUS_PROC
+	job.SetProc()
 	job.RunAt = current
 	sched.driver.Save(&job)
 	sched.incrStatProc(job)
@@ -359,7 +359,7 @@ func (sched *Sched) handleRevertPQ() {
 		}
 
 		sched.decrStatProc(revertJob)
-		revertJob.Status = driver.JOB_STATUS_READY
+		revertJob.SetReady()
 		sched.driver.Save(&revertJob)
 		sched.pushJobPQ(revertJob)
 		sched.jobLocker.Lock()
@@ -381,7 +381,7 @@ func (sched *Sched) fail(jobID int64) {
 	job, _ := sched.driver.Get(jobID)
 	sched.decrStatProc(job)
 	sched.removeRevertPQ(job)
-	job.Status = driver.JOB_STATUS_READY
+	job.SetReady()
 	sched.driver.Save(&job)
 	sched.pushJobPQ(job)
 	return
@@ -420,14 +420,14 @@ func (sched *Sched) decrStatJob(job driver.Job) {
 
 func (sched *Sched) incrStatProc(job driver.Job) {
 	stat := sched.getFuncStat(job.Func)
-	if job.Status == driver.JOB_STATUS_PROC {
+	if job.IsProc() {
 		stat.Processing.Incr()
 	}
 }
 
 func (sched *Sched) decrStatProc(job driver.Job) {
 	stat := sched.getFuncStat(job.Func)
-	if job.Status == driver.JOB_STATUS_PROC {
+	if job.IsProc() {
 		stat.Processing.Decr()
 	}
 }
@@ -443,7 +443,7 @@ func (sched *Sched) schedLater(jobID int64, delay int64) {
 	job, _ := sched.driver.Get(jobID)
 	sched.decrStatProc(job)
 	sched.removeRevertPQ(job)
-	job.Status = driver.JOB_STATUS_READY
+	job.SetReady()
 	var now = time.Now()
 	job.SchedAt = int64(now.Unix()) + delay
 	sched.driver.Save(&job)
@@ -454,7 +454,7 @@ func (sched *Sched) schedLater(jobID int64, delay int64) {
 func (sched *Sched) pushJobPQ(job driver.Job) bool {
 	defer sched.PQLocker.Unlock()
 	sched.PQLocker.Lock()
-	if job.Status == driver.JOB_STATUS_READY {
+	if job.IsReady() {
 		item := &queue.Item{
 			Value:    job.ID,
 			Priority: job.SchedAt,
@@ -465,7 +465,7 @@ func (sched *Sched) pushJobPQ(job driver.Job) bool {
 			}
 			job, _ = sched.driver.Get(sched.cacheItem.Value)
 			sched.cacheItem = item
-			if job.ID <= 0 || job.Status != driver.JOB_STATUS_READY {
+			if job.ID <= 0 || !job.IsReady() {
 				return false
 			}
 		}
@@ -485,7 +485,7 @@ func (sched *Sched) pushJobPQ(job driver.Job) bool {
 func (sched *Sched) pushRevertPQ(job driver.Job) {
 	defer sched.PQLocker.Unlock()
 	sched.PQLocker.Lock()
-	if job.Status == driver.JOB_STATUS_PROC && job.Timeout > 0 {
+	if job.IsProc() && job.Timeout > 0 {
 		runAt := job.RunAt
 		if runAt == 0 {
 			runAt = job.SchedAt
@@ -501,7 +501,7 @@ func (sched *Sched) pushRevertPQ(job driver.Job) {
 func (sched *Sched) removeRevertPQ(job driver.Job) {
 	defer sched.PQLocker.Unlock()
 	sched.PQLocker.Lock()
-	if job.Status == driver.JOB_STATUS_PROC && job.Timeout > 0 {
+	if job.IsProc() && job.Timeout > 0 {
 		for _, item := range sched.revertPQ {
 			if item.Value == job.ID {
 				heap.Remove(&sched.revertPQ, item.Index)
@@ -547,7 +547,7 @@ func (sched *Sched) loadJobQueue() {
 	iter.Close()
 
 	for _, job := range updateQueue {
-		job.Status = driver.JOB_STATUS_READY
+		job.SetReady()
 		sched.driver.Save(&job)
 	}
 

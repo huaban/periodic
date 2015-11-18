@@ -102,11 +102,11 @@ func (c *client) handleSubmitJob(msgID []byte, payload []byte) (err error) {
 	}
 	isNew := true
 	changed := false
-	job.Status = driver.JOB_STATUS_READY
+	job.SetReady()
 	oldJob, e := sched.driver.GetOne(job.Func, job.Name)
 	if e == nil && oldJob.ID > 0 {
 		job.ID = oldJob.ID
-		if oldJob.Status == driver.JOB_STATUS_PROC {
+		if oldJob.IsProc() {
 			sched.decrStatProc(oldJob)
 			sched.removeRevertPQ(job)
 			changed = true
@@ -189,7 +189,7 @@ func (c *client) handleRemoveJob(msgID, payload []byte) (err error) {
 		}
 		sched.driver.Delete(job.ID)
 		sched.decrStatJob(job)
-		if job.Status == driver.JOB_STATUS_PROC {
+		if job.IsProc() {
 			sched.decrStatProc(job)
 			sched.removeRevertPQ(job)
 		}
@@ -279,7 +279,7 @@ func (c *client) handleLoad(msgID, payload []byte) (err error) {
 			runAt = job.SchedAt
 		}
 
-		job.Status = driver.JOB_STATUS_READY
+		job.SetReady()
 
 		if err = sched.driver.Save(&job, true); err != nil {
 			return

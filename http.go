@@ -113,11 +113,11 @@ func (c *httpClient) handleSubmitJob(req *http.Request) {
 
 	isNew := true
 	changed := false
-	job.Status = driver.JOB_STATUS_READY
+	job.SetReady()
 	oldJob, e := sched.driver.GetOne(job.Func, job.Name)
 	if e == nil && oldJob.ID > 0 {
 		job.ID = oldJob.ID
-		if oldJob.Status == driver.JOB_STATUS_PROC {
+		if job.IsProc() {
 			sched.decrStatProc(oldJob)
 			sched.removeRevertPQ(job)
 			changed = true
@@ -220,7 +220,7 @@ func (c *httpClient) handleRemoveJob(req *http.Request) {
 		}
 		sched.driver.Delete(job.ID)
 		sched.decrStatJob(job)
-		if job.Status == driver.JOB_STATUS_PROC {
+		if job.IsProc() {
 			sched.decrStatProc(job)
 			sched.removeRevertPQ(job)
 		}
