@@ -4,7 +4,9 @@ import (
     "net"
     "bytes"
     "strings"
+    "sort"
     "github.com/Lupino/periodic/protocol"
+    "github.com/gosuri/uitable"
     "fmt"
     "log"
 )
@@ -40,12 +42,17 @@ func ShowStatus(entryPoint string) {
         panic(err)
     }
     stats := strings.Split(string(_parts[1]), "\n")
+    sort.Strings(stats)
+    table := uitable.New()
+    table.MaxColWidth = 50
+
+    table.AddRow("FUNCTION", "WORKERS", "JOBS", "PROCESSING")
     for _, stat := range stats {
         if stat == "" {
             continue
         }
         line := strings.Split(stat, ",")
-        fmt.Printf("Func: %s\tWorker: %s\tJob: %s\tProcessing: %s\n",
-                   line[0], line[1], line[2], line[3])
+        table.AddRow(line[0], line[1], line[2], line[3])
     }
+    fmt.Println(table)
 }
