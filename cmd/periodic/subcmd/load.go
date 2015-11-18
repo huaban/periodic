@@ -10,6 +10,7 @@ import (
 	"strings"
 )
 
+// Load cli load
 func Load(entryPoint, input string) {
 	parts := strings.SplitN(entryPoint, "://", 2)
 	c, err := net.Dial(parts[0], parts[1])
@@ -18,7 +19,7 @@ func Load(entryPoint, input string) {
 	}
 	conn := protocol.NewClientConn(c)
 	defer conn.Close()
-	err = conn.Send(protocol.TYPE_CLIENT.Bytes())
+	err = conn.Send(protocol.TYPECLIENT.Bytes())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -42,9 +43,9 @@ func Load(entryPoint, input string) {
 
 		buf := bytes.NewBuffer(nil)
 		buf.Write(msgID)
-		buf.Write(protocol.NULL_CHAR)
+		buf.Write(protocol.NullChar)
 		buf.Write(protocol.LOAD.Bytes())
-		buf.Write(protocol.NULL_CHAR)
+		buf.Write(protocol.NullChar)
 		buf.Write(payload)
 
 		err = conn.Send(buf.Bytes())

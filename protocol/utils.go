@@ -7,12 +7,12 @@ import (
 )
 
 // Split the message payload
-var NULL_CHAR = []byte("\x00\x01")
+var NullChar = []byte("\x00\x01")
 
-// Parse command payload to extract msgID cmd and data
+// ParseCommand payload to extract msgID cmd and data
 func ParseCommand(payload []byte) (msgID []byte, cmd Command, data []byte) {
-	parts := bytes.SplitN(payload, NULL_CHAR, 3)
-	var err = fmt.Sprintf("InvalId %v\n", payload)
+	parts := bytes.SplitN(payload, NullChar, 3)
+	var err = fmt.Sprintf("InvalID %v\n", payload)
 	if len(parts) == 1 {
 		panic(err)
 	}
@@ -27,8 +27,7 @@ func ParseCommand(payload []byte) (msgID []byte, cmd Command, data []byte) {
 	return
 }
 
-// Framing:
-// In order to handle framing in Send/Recieve, as these give frame
+// MakeHeader In order to handle framing in Send/Recieve, as these give frame
 // boundaries we use a very simple 4 bytes header.
 func MakeHeader(data []byte) ([]byte, error) {
 	header := make([]byte, 4)
@@ -47,6 +46,7 @@ func MakeHeader(data []byte) ([]byte, error) {
 	return header, nil
 }
 
+// ParseHeader extract the pack header by MakeHeader
 func ParseHeader(header []byte) uint32 {
 	length := uint32(header[0])<<24 | uint32(header[1])<<16 | uint32(header[2])<<8 | uint32(header[3])
 	length = length & ^uint32(0x80000000)

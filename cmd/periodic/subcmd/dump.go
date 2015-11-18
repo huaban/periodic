@@ -10,6 +10,7 @@ import (
 	"strings"
 )
 
+// Dump cli dump
 func Dump(entryPoint, output string) {
 	parts := strings.SplitN(entryPoint, "://", 2)
 	c, err := net.Dial(parts[0], parts[1])
@@ -18,14 +19,14 @@ func Dump(entryPoint, output string) {
 	}
 	conn := protocol.NewClientConn(c)
 	defer conn.Close()
-	err = conn.Send(protocol.TYPE_CLIENT.Bytes())
+	err = conn.Send(protocol.TYPECLIENT.Bytes())
 	if err != nil {
 		log.Fatal(err)
 	}
 	var msgID = []byte("100")
 	buf := bytes.NewBuffer(nil)
 	buf.Write(msgID)
-	buf.Write(protocol.NULL_CHAR)
+	buf.Write(protocol.NullChar)
 	buf.Write(protocol.DUMP.Bytes())
 	err = conn.Send(buf.Bytes())
 	if err != nil {
@@ -44,9 +45,9 @@ func Dump(entryPoint, output string) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		_parts := bytes.SplitN(payload, protocol.NULL_CHAR, 2)
+		_parts := bytes.SplitN(payload, protocol.NullChar, 2)
 		if len(_parts) != 2 {
-			err := fmt.Sprint("ParseCommand InvalId %v\n", payload)
+			err := fmt.Sprint("ParseCommand InvalID %v\n", payload)
 			panic(err)
 		}
 		payload = _parts[1]

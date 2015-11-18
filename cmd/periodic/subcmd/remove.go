@@ -10,6 +10,7 @@ import (
 	"strings"
 )
 
+// RemoveJob cli remove
 func RemoveJob(entryPoint string, job driver.Job) {
 	parts := strings.SplitN(entryPoint, "://", 2)
 	c, err := net.Dial(parts[0], parts[1])
@@ -18,16 +19,16 @@ func RemoveJob(entryPoint string, job driver.Job) {
 	}
 	conn := protocol.NewClientConn(c)
 	defer conn.Close()
-	err = conn.Send(protocol.TYPE_CLIENT.Bytes())
+	err = conn.Send(protocol.TYPECLIENT.Bytes())
 	if err != nil {
 		log.Fatal(err)
 	}
 	var msgID = []byte("100")
 	buf := bytes.NewBuffer(nil)
 	buf.Write(msgID)
-	buf.Write(protocol.NULL_CHAR)
-	buf.WriteByte(byte(protocol.REMOVE_JOB))
-	buf.Write(protocol.NULL_CHAR)
+	buf.Write(protocol.NullChar)
+	buf.WriteByte(byte(protocol.REMOVEJOB))
+	buf.Write(protocol.NullChar)
 	buf.Write(job.Bytes())
 	err = conn.Send(buf.Bytes())
 	if err != nil {

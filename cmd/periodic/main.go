@@ -238,10 +238,10 @@ func main() {
 				store = driver.NewMemStroeDriver()
 				break
 			case "redis":
-				store = redis.NewRedisDriver(c.String("redis"))
+				store = redis.NewDriver(c.String("redis"))
 				break
 			case "leveldb":
-				store = leveldb.NewLevelDBDriver(c.String("dbpath"))
+				store = leveldb.NewDriver(c.String("dbpath"))
 				break
 			default:
 				store = driver.NewMemStroeDriver()

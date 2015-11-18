@@ -16,6 +16,7 @@ import (
 	"time"
 )
 
+// Run cli run
 func Run(entryPoint, Func, cmd string) {
 	parts := strings.SplitN(entryPoint, "://", 2)
 	for {
@@ -40,16 +41,16 @@ func Run(entryPoint, Func, cmd string) {
 }
 
 func handleWorker(conn protocol.Conn, Func, cmd string) (err error) {
-	err = conn.Send(protocol.TYPE_WORKER.Bytes())
+	err = conn.Send(protocol.TYPEWORKER.Bytes())
 	if err != nil {
 		return
 	}
 	var msgID = []byte("100")
 	buf := bytes.NewBuffer(nil)
 	buf.Write(msgID)
-	buf.Write(protocol.NULL_CHAR)
-	buf.WriteByte(byte(protocol.CAN_DO))
-	buf.Write(protocol.NULL_CHAR)
+	buf.Write(protocol.NullChar)
+	buf.WriteByte(byte(protocol.CANDO))
+	buf.Write(protocol.NullChar)
 	buf.WriteString(Func)
 	err = conn.Send(buf.Bytes())
 	if err != nil {
@@ -62,8 +63,8 @@ func handleWorker(conn protocol.Conn, Func, cmd string) (err error) {
 	for {
 		buf = bytes.NewBuffer(nil)
 		buf.Write(msgID)
-		buf.Write(protocol.NULL_CHAR)
-		buf.Write(protocol.GRAB_JOB.Bytes())
+		buf.Write(protocol.NullChar)
+		buf.Write(protocol.GRABJOB.Bytes())
 		err = conn.Send(buf.Bytes())
 		if err != nil {
 			return
@@ -88,7 +89,7 @@ func handleWorker(conn protocol.Conn, Func, cmd string) (err error) {
 			if err != nil {
 				break
 			}
-			if strings.HasPrefix(line, "SCHED_LATER") {
+			if strings.HasPrefix(line, "SCHEDLATER") {
 				parts := strings.SplitN(line[:len(line)-1], " ", 2)
 				later := strings.Trim(parts[1], " ")
 				schedLater, _ = strconv.Atoi(later)
@@ -100,18 +101,18 @@ func handleWorker(conn protocol.Conn, Func, cmd string) (err error) {
 		}
 		buf = bytes.NewBuffer(nil)
 		buf.Write(msgID)
-		buf.Write(protocol.NULL_CHAR)
+		buf.Write(protocol.NullChar)
 		if err != nil || fail {
-			buf.WriteByte(byte(protocol.WORK_FAIL))
+			buf.WriteByte(byte(protocol.WORKFAIL))
 		} else if schedLater > 0 {
-			buf.WriteByte(byte(protocol.SCHED_LATER))
+			buf.WriteByte(byte(protocol.SCHEDLATER))
 		} else {
-			buf.WriteByte(byte(protocol.WORK_DONE))
+			buf.WriteByte(byte(protocol.WORKDONE))
 		}
-		buf.Write(protocol.NULL_CHAR)
+		buf.Write(protocol.NullChar)
 		buf.Write(jobHandle)
 		if schedLater > 0 {
-			buf.Write(protocol.NULL_CHAR)
+			buf.Write(protocol.NullChar)
 			buf.WriteString(strconv.Itoa(schedLater))
 		}
 		err = conn.Send(buf.Bytes())
@@ -122,7 +123,7 @@ func handleWorker(conn protocol.Conn, Func, cmd string) (err error) {
 }
 
 func extraJob(payload []byte) (job driver.Job, jobHandle []byte, err error) {
-	parts := bytes.SplitN(payload, protocol.NULL_CHAR, 4)
+	parts := bytes.SplitN(payload, protocol.NullChar, 4)
 	if len(parts) != 4 {
 		err = errors.New("Invalid payload " + string(payload))
 		return

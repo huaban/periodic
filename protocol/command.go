@@ -5,37 +5,53 @@ import (
 	"strconv"
 )
 
-// Define command type.
+// Command defined command type.
 type Command int
 
 const (
+	// NOOP do nothing
 	NOOP Command = iota // server
-	// for job
-	GRAB_JOB    // client
-	SCHED_LATER // client
-	WORK_DONE   // client
-	WORK_FAIL   // client
-	JOB_ASSIGN  // server
-	NO_JOB      // server
-	// for func
-	CAN_DO  // client
-	CANT_DO // client
-	// for test
+	// GRABJOB client ask a job
+	GRABJOB // client
+	// SCHEDLATER tell server sched later the job
+	SCHEDLATER // client
+	// WORKDONE tell server the work is done
+	WORKDONE // client
+	// WORKFAIL tell server work is fail
+	WORKFAIL // client
+	// JOBASSIGN assign a job for client
+	JOBASSIGN // server
+	// NOJOB tell client job is empty
+	NOJOB // server
+	// CANDO tell server the client can do some func
+	CANDO // client
+	// CANTDO tell server the client can not do some func
+	CANTDO // client
+	// PING test ping
 	PING // client
+	// PONG reply pong
 	PONG // server
-	// other
-	SLEEP   // client
+	// SLEEP tell the client to sleep
+	SLEEP // client
+	// UNKNOWN command unknow
 	UNKNOWN // server
-	// client command
-	SUBMIT_JOB // client
-	STATUS     // client
-	DROP_FUNC  // client
-	SUCCESS    // server
-	REMOVE_JOB // client
-	DUMP       // client
-	LOAD       // client
+	// SUBMITJOB submit a job for server
+	SUBMITJOB // client
+	// STATUS ask the server status
+	STATUS // client
+	// DROPFUNC drop an empty worker func
+	DROPFUNC // client
+	// SUCCESS reply client success
+	SUCCESS // server
+	// REMOVEJOB remove a job
+	REMOVEJOB // client
+	// DUMP dump the data
+	DUMP // client
+	// LOAD load data to database
+	LOAD // client
 )
 
+// Bytes convert command to byte
 func (c Command) Bytes() []byte {
 	buf := bytes.NewBuffer(nil)
 	buf.WriteByte(byte(c))
@@ -46,22 +62,22 @@ func (c Command) String() string {
 	switch c {
 	case NOOP:
 		return "NOOP"
-	case GRAB_JOB:
-		return "GRAB_JOB"
-	case SCHED_LATER:
-		return "SCHED_LATER"
-	case WORK_DONE:
-		return "WORK_DONE"
-	case WORK_FAIL:
-		return "WORK_FAIL"
-	case JOB_ASSIGN:
-		return "JOB_ASSIGN"
-	case NO_JOB:
-		return "NO_JOB"
-	case CAN_DO:
-		return "CAN_DO"
-	case CANT_DO:
-		return "CANT_DO"
+	case GRABJOB:
+		return "GRABJOB"
+	case SCHEDLATER:
+		return "SCHEDLATER"
+	case WORKDONE:
+		return "WORKDONE"
+	case WORKFAIL:
+		return "WORKFAIL"
+	case JOBASSIGN:
+		return "JOBASSIGN"
+	case NOJOB:
+		return "NOJOB"
+	case CANDO:
+		return "CANDO"
+	case CANTDO:
+		return "CANTDO"
 	case PING:
 		return "PING"
 	case PONG:
@@ -70,16 +86,16 @@ func (c Command) String() string {
 		return "SLEEP"
 	case UNKNOWN:
 		return "UNKNOWN"
-	case SUBMIT_JOB:
-		return "SUBMIT_JOB"
+	case SUBMITJOB:
+		return "SUBMITJOB"
 	case STATUS:
 		return "STATUS"
-	case DROP_FUNC:
-		return "DROP_FUNC"
+	case DROPFUNC:
+		return "DROPFUNC"
 	case SUCCESS:
 		return "SUCCESS"
-	case REMOVE_JOB:
-		return "REMOVE_JOB"
+	case REMOVEJOB:
+		return "REMOVEJOB"
 	case DUMP:
 		return "DUMP"
 	}

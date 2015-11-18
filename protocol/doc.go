@@ -1,5 +1,5 @@
 /*
-# Periodic Protocol
+Package protocol defined periodic protocol
 
 The Periodic protocol operates over TCP on port 5000 by default,
 or unix socket on unix:///tmp/periodic.sock.

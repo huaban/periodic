@@ -45,7 +45,7 @@ func (c *client) handle() {
 		msgID, cmd, payload = protocol.ParseCommand(payload)
 
 		switch cmd {
-		case protocol.SUBMIT_JOB:
+		case protocol.SUBMITJOB:
 			err = c.handleSubmitJob(msgID, payload)
 			break
 		case protocol.STATUS:
@@ -54,10 +54,10 @@ func (c *client) handle() {
 		case protocol.PING:
 			err = c.handleCommand(msgID, protocol.PONG)
 			break
-		case protocol.DROP_FUNC:
+		case protocol.DROPFUNC:
 			err = c.handleDropFunc(msgID, payload)
 			break
-		case protocol.REMOVE_JOB:
+		case protocol.REMOVEJOB:
 			err = c.handleRemoveJob(msgID, payload)
 			break
 		case protocol.DUMP:
@@ -82,7 +82,7 @@ func (c *client) handle() {
 func (c *client) handleCommand(msgID []byte, cmd protocol.Command) (err error) {
 	buf := bytes.NewBuffer(nil)
 	buf.Write(msgID)
-	buf.Write(protocol.NULL_CHAR)
+	buf.Write(protocol.NullChar)
 	buf.Write(cmd.Bytes())
 	err = c.conn.Send(buf.Bytes())
 	return
@@ -100,18 +100,18 @@ func (c *client) handleSubmitJob(msgID []byte, payload []byte) (err error) {
 		err = conn.Send([]byte(e.Error()))
 		return
 	}
-	is_new := true
+	isNew := true
 	changed := false
 	job.Status = driver.JOB_STATUS_READY
 	oldJob, e := sched.driver.GetOne(job.Func, job.Name)
-	if e == nil && oldJob.Id > 0 {
-		job.Id = oldJob.Id
+	if e == nil && oldJob.ID > 0 {
+		job.ID = oldJob.ID
 		if oldJob.Status == driver.JOB_STATUS_PROC {
 			sched.decrStatProc(oldJob)
 			sched.removeRevertPQ(job)
 			changed = true
 		}
-		is_new = false
+		isNew = false
 	}
 	e = sched.driver.Save(&job)
 	if e != nil {
@@ -119,10 +119,10 @@ func (c *client) handleSubmitJob(msgID []byte, payload []byte) (err error) {
 		return
 	}
 
-	if is_new {
+	if isNew {
 		sched.incrStatJob(job)
 	}
-	if is_new || changed {
+	if isNew || changed {
 		sched.pushJobPQ(job)
 	}
 	sched.notifyJobTimer()
@@ -133,7 +133,7 @@ func (c *client) handleSubmitJob(msgID []byte, payload []byte) (err error) {
 func (c *client) handleStatus(msgID []byte) (err error) {
 	buf := bytes.NewBuffer(nil)
 	buf.Write(msgID)
-	buf.Write(protocol.NULL_CHAR)
+	buf.Write(protocol.NullChar)
 	for _, stat := range c.sched.stats {
 		buf.WriteString(stat.String())
 		buf.WriteString("\n")
@@ -151,13 +151,13 @@ func (c *client) handleDropFunc(msgID []byte, payload []byte) (err error) {
 	sched.jobLocker.Lock()
 	if ok && stat.Worker.Int() == 0 {
 		iter := sched.driver.NewIterator(payload)
-		deleteJob := make([]int64, 0)
+		var deleteJob = make([]int64, 0)
 		for {
 			if !iter.Next() {
 				break
 			}
 			job := iter.Value()
-			deleteJob = append(deleteJob, job.Id)
+			deleteJob = append(deleteJob, job.ID)
 		}
 		iter.Close()
 		for _, jobID := range deleteJob {
@@ -183,11 +183,11 @@ func (c *client) handleRemoveJob(msgID, payload []byte) (err error) {
 		return
 	}
 	job, e = sched.driver.GetOne(job.Func, job.Name)
-	if e == nil && job.Id > 0 {
-		if _, ok := sched.procQueue[job.Id]; ok {
-			delete(sched.procQueue, job.Id)
+	if e == nil && job.ID > 0 {
+		if _, ok := sched.procQueue[job.ID]; ok {
+			delete(sched.procQueue, job.ID)
 		}
-		sched.driver.Delete(job.Id)
+		sched.driver.Delete(job.ID)
 		sched.decrStatJob(job)
 		if job.Status == driver.JOB_STATUS_PROC {
 			sched.decrStatProc(job)
@@ -244,7 +244,7 @@ func (c *client) handleDump(msgID []byte) (err error) {
 
 	buffer := bytes.NewBuffer(nil)
 	buffer.Write(msgID)
-	buffer.Write(protocol.NULL_CHAR)
+	buffer.Write(protocol.NullChar)
 	buffer.WriteString("EOF")
 	err = c.conn.Send(buffer.Bytes())
 	return
@@ -253,7 +253,7 @@ func (c *client) handleDump(msgID []byte) (err error) {
 func (c *client) handleJobList(msgID []byte, jobList []driver.Job) (err error) {
 	buffer := bytes.NewBuffer(nil)
 	buffer.Write(msgID)
-	buffer.Write(protocol.NULL_CHAR)
+	buffer.Write(protocol.NullChar)
 	data, _ := json.Marshal(map[string][]driver.Job{"jobs": jobList})
 	buffer.Write(data)
 	err = c.conn.Send(buffer.Bytes())

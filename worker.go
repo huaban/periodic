@@ -37,14 +37,14 @@ func (w *worker) IsAlive() bool {
 func (w *worker) handleJobAssign(msgID []byte, job driver.Job) (err error) {
 	defer w.locker.Unlock()
 	w.locker.Lock()
-	w.jobQueue[job.Id] = job
+	w.jobQueue[job.ID] = job
 	buf := bytes.NewBuffer(nil)
 	buf.Write(msgID)
-	buf.Write(protocol.NULL_CHAR)
-	buf.Write(protocol.JOB_ASSIGN.Bytes())
-	buf.Write(protocol.NULL_CHAR)
-	buf.WriteString(strconv.FormatInt(job.Id, 10))
-	buf.Write(protocol.NULL_CHAR)
+	buf.Write(protocol.NullChar)
+	buf.Write(protocol.JOBASSIGN.Bytes())
+	buf.Write(protocol.NullChar)
+	buf.WriteString(strconv.FormatInt(job.ID, 10))
+	buf.Write(protocol.NullChar)
 	buf.Write(job.Bytes())
 	err = w.conn.Send(buf.Bytes())
 	return
@@ -62,7 +62,7 @@ func (w *worker) handleCanDo(Func string) error {
 }
 
 func (w *worker) handleCanNoDo(Func string) error {
-	newFuncs := make([]string, 0)
+	var newFuncs = make([]string, 0)
 	for _, f := range w.funcs {
 		if f == Func {
 			continue
@@ -96,7 +96,7 @@ func (w *worker) handleFail(jobID int64) (err error) {
 func (w *worker) handleCommand(msgID []byte, cmd protocol.Command) (err error) {
 	buf := bytes.NewBuffer(nil)
 	buf.Write(msgID)
-	buf.Write(protocol.NULL_CHAR)
+	buf.Write(protocol.NullChar)
 	buf.Write(cmd.Bytes())
 	err = w.conn.Send(buf.Bytes())
 	return
@@ -146,19 +146,19 @@ func (w *worker) handle() {
 		msgID, cmd, payload = protocol.ParseCommand(payload)
 
 		switch cmd {
-		case protocol.GRAB_JOB:
+		case protocol.GRABJOB:
 			err = w.handleGrabJob(msgID)
 			break
-		case protocol.WORK_DONE:
+		case protocol.WORKDONE:
 			jobID, _ := strconv.ParseInt(string(payload), 10, 0)
 			err = w.handleDone(jobID)
 			break
-		case protocol.WORK_FAIL:
+		case protocol.WORKFAIL:
 			jobID, _ := strconv.ParseInt(string(payload), 10, 0)
 			err = w.handleFail(jobID)
 			break
-		case protocol.SCHED_LATER:
-			parts := bytes.SplitN(payload, protocol.NULL_CHAR, 2)
+		case protocol.SCHEDLATER:
+			parts := bytes.SplitN(payload, protocol.NullChar, 2)
 			if len(parts) != 2 {
 				log.Printf("Error: invalid format.")
 				break
@@ -173,10 +173,10 @@ func (w *worker) handle() {
 		case protocol.PING:
 			err = w.handleCommand(msgID, protocol.PONG)
 			break
-		case protocol.CAN_DO:
+		case protocol.CANDO:
 			err = w.handleCanDo(string(payload))
 			break
-		case protocol.CANT_DO:
+		case protocol.CANTDO:
 			err = w.handleCanNoDo(string(payload))
 			break
 		default:
@@ -201,7 +201,7 @@ func (w *worker) Close() {
 	defer w.conn.Close()
 	w.sched.grabQueue.removeWorker(w)
 	w.alive = false
-	for k, _ := range w.jobQueue {
+	for k := range w.jobQueue {
 		w.sched.fail(k)
 	}
 	w.jobQueue = nil

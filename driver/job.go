@@ -12,7 +12,7 @@ const (
 
 // Job workload.
 type Job struct {
-	Id int64 `json:"job_id"`
+	ID int64 `json:"job_id"`
 	// The job name, this is unique.
 	Name string `json:"name"`
 	// The job function reffer on worker function
@@ -28,13 +28,13 @@ type Job struct {
 	Status string `json:"status"`
 }
 
-// Create a job from json bytes
+// NewJob create a job from json bytes
 func NewJob(payload []byte) (job Job, err error) {
 	err = json.Unmarshal(payload, &job)
 	return
 }
 
-// Encode job to json bytes
+// Bytes encode job to json bytes
 func (job Job) Bytes() (data []byte) {
 	data, _ = json.Marshal(job)
 	return

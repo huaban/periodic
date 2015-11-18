@@ -5,11 +5,13 @@ import (
 	"sync"
 )
 
+// Counter defined a counter
 type Counter struct {
 	c      int
 	locker *sync.Mutex
 }
 
+// NewCounter create a counter
 func NewCounter(c int) *Counter {
 	var counter = new(Counter)
 	counter.c = c
@@ -17,12 +19,14 @@ func NewCounter(c int) *Counter {
 	return counter
 }
 
+// Incr the counter
 func (c *Counter) Incr() {
 	defer c.locker.Unlock()
 	c.locker.Lock()
 	c.c = c.c + 1
 }
 
+// Decr the counter
 func (c *Counter) Decr() {
 	defer c.locker.Unlock()
 	c.locker.Lock()
@@ -38,6 +42,7 @@ func (c *Counter) String() string {
 	return strconv.Itoa(c.c)
 }
 
+// Int return the counter value
 func (c *Counter) Int() int {
 	defer c.locker.Unlock()
 	c.locker.Lock()

@@ -16,6 +16,7 @@ import (
 	"time"
 )
 
+// Sched defined periodic schedule
 type Sched struct {
 	jobTimer    *time.Timer
 	grabQueue   *grabQueue
@@ -35,6 +36,7 @@ type Sched struct {
 	cacheItem   *queue.Item
 }
 
+// NewSched create an instance of periodic schedule
 func NewSched(entryPoint string, store driver.StoreDriver, timeout time.Duration) *Sched {
 	sched := new(Sched)
 	sched.jobTimer = time.NewTimer(1 * time.Hour)
@@ -57,6 +59,7 @@ func NewSched(entryPoint string, store driver.StoreDriver, timeout time.Duration
 	return sched
 }
 
+// Serve of periodic
 func (sched *Sched) Serve() {
 	parts := strings.SplitN(sched.entryPoint, "://", 2)
 	isTCP := true
@@ -119,7 +122,7 @@ func (sched *Sched) handleConnection(conn net.Conn) {
 	payload, err := c.Receive()
 	if len(payload) == 4 {
 		if bytes.Contains([]byte("GET ,POST,DELETE,PUT "), payload) {
-			httpclient := newHttpClient(sched, c)
+			httpclient := newHTTPClient(sched, c)
 			httpclient.handle(payload)
 		} else {
 			log.Printf("Unsupport protocol %v\n", payload)
@@ -135,11 +138,11 @@ func (sched *Sched) handleConnection(conn net.Conn) {
 		return
 	}
 	switch protocol.ClientType(payload[0]) {
-	case protocol.TYPE_CLIENT:
+	case protocol.TYPECLIENT:
 		client := newClient(sched, c)
 		client.handle()
 		break
-	case protocol.TYPE_WORKER:
+	case protocol.TYPEWORKER:
 		w := newWorker(sched, c)
 		w.handle()
 		break
@@ -172,10 +175,10 @@ func (sched *Sched) submitJob(item grabItem, job driver.Job) bool {
 	defer sched.jobLocker.Unlock()
 	sched.jobLocker.Lock()
 	if job.Name == "" {
-		sched.driver.Delete(job.Id)
+		sched.driver.Delete(job.ID)
 		return true
 	}
-	if _, ok := sched.procQueue[job.Id]; ok {
+	if _, ok := sched.procQueue[job.ID]; ok {
 		return true
 	}
 
@@ -194,7 +197,7 @@ func (sched *Sched) submitJob(item grabItem, job driver.Job) bool {
 	sched.incrStatProc(job)
 	sched.pushRevertPQ(job)
 	sched.notifyRevertTimer()
-	sched.procQueue[job.Id] = job
+	sched.procQueue[job.ID] = job
 	sched.grabQueue.remove(item)
 	return true
 }
@@ -360,8 +363,8 @@ func (sched *Sched) handleRevertPQ() {
 		sched.driver.Save(&revertJob)
 		sched.pushJobPQ(revertJob)
 		sched.jobLocker.Lock()
-		if _, ok := sched.procQueue[revertJob.Id]; ok {
-			delete(sched.procQueue, revertJob.Id)
+		if _, ok := sched.procQueue[revertJob.ID]; ok {
+			delete(sched.procQueue, revertJob.ID)
 		}
 		sched.jobLocker.Unlock()
 	}
@@ -453,16 +456,16 @@ func (sched *Sched) pushJobPQ(job driver.Job) bool {
 	sched.PQLocker.Lock()
 	if job.Status == driver.JOB_STATUS_READY {
 		item := &queue.Item{
-			Value:    job.Id,
+			Value:    job.ID,
 			Priority: job.SchedAt,
 		}
 		if sched.cacheItem != nil && item.Priority < sched.cacheItem.Priority {
-			if job.Id == sched.cacheItem.Value {
+			if job.ID == sched.cacheItem.Value {
 				return true
 			}
 			job, _ = sched.driver.Get(sched.cacheItem.Value)
 			sched.cacheItem = item
-			if job.Id <= 0 || job.Status != driver.JOB_STATUS_READY {
+			if job.ID <= 0 || job.Status != driver.JOB_STATUS_READY {
 				return false
 			}
 		}
@@ -488,7 +491,7 @@ func (sched *Sched) pushRevertPQ(job driver.Job) {
 			runAt = job.SchedAt
 		}
 		item := &queue.Item{
-			Value:    job.Id,
+			Value:    job.ID,
 			Priority: runAt + job.Timeout,
 		}
 		heap.Push(&sched.revertPQ, item)
@@ -500,7 +503,7 @@ func (sched *Sched) removeRevertPQ(job driver.Job) {
 	sched.PQLocker.Lock()
 	if job.Status == driver.JOB_STATUS_PROC && job.Timeout > 0 {
 		for _, item := range sched.revertPQ {
-			if item.Value == job.Id {
+			if item.Value == job.ID {
 				heap.Remove(&sched.revertPQ, item.Index)
 				break
 			}
@@ -509,8 +512,8 @@ func (sched *Sched) removeRevertPQ(job driver.Job) {
 }
 
 func (sched *Sched) loadJobQueue() {
-	updateQueue := make([]driver.Job, 0)
-	removeQueue := make([]driver.Job, 0)
+	var updateQueue = make([]driver.Job, 0)
+	var removeQueue = make([]driver.Job, 0)
 	var now = time.Now()
 	current := int64(now.Unix())
 
@@ -534,7 +537,7 @@ func (sched *Sched) loadJobQueue() {
 			updateQueue = append(updateQueue, job)
 		} else {
 			sched.jobLocker.Lock()
-			sched.procQueue[job.Id] = job
+			sched.procQueue[job.ID] = job
 			sched.jobLocker.Unlock()
 			sched.incrStatProc(job)
 			sched.pushRevertPQ(job)
@@ -549,10 +552,11 @@ func (sched *Sched) loadJobQueue() {
 	}
 
 	for _, job := range removeQueue {
-		sched.driver.Delete(job.Id)
+		sched.driver.Delete(job.ID)
 	}
 }
 
+// Close the schedule
 func (sched *Sched) Close() {
 	sched.alive = false
 	sched.driver.Close()

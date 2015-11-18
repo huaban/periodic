@@ -4,6 +4,7 @@ import (
 	"fmt"
 )
 
+// FuncStat defined func stat
 type FuncStat struct {
 	Name       string
 	Worker     *Counter
@@ -11,6 +12,7 @@ type FuncStat struct {
 	Processing *Counter
 }
 
+// NewFuncStat create a func stat
 func NewFuncStat(name string) *FuncStat {
 	var stat = new(FuncStat)
 	stat.Name = name

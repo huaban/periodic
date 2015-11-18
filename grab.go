@@ -48,7 +48,7 @@ func (g *grabQueue) get(Func string) (item grabItem, err error) {
 			return
 		}
 	}
-	err = fmt.Errorf("func name: %s not found.", Func)
+	err = fmt.Errorf("func name: %s not found", Func)
 	return
 }
 
