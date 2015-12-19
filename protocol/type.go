@@ -1,34 +1,34 @@
 package protocol
 
 import (
-    "bytes"
-    "strconv"
+	"bytes"
+	"strconv"
 )
 
-// Define the client type.
+// ClientType Define the client type.
 type ClientType int
 
 const (
-    // Client type.
-    TYPE_CLIENT ClientType = iota + 1
-    // Worker type.
-    TYPE_WORKER
+	// TYPECLIENT defined the connection client is a client.
+	TYPECLIENT ClientType = iota + 1
+	// TYPEWORKER defined the connection client is a worker.
+	TYPEWORKER
 )
 
-// to byte
+// Bytes convert client type to Byte
 func (c ClientType) Bytes() []byte {
-    buf := bytes.NewBuffer(nil)
-    buf.WriteByte(byte(c))
-    return buf.Bytes()
+	buf := bytes.NewBuffer(nil)
+	buf.WriteByte(byte(c))
+	return buf.Bytes()
 }
 
-// to string `TYPE_CLIENT`, `TYPE_WORKER`.
+// to string `TYPECLIENT`, `TYPEWORKER`.
 func (c ClientType) String() string {
-    switch c {
-        case 1:
-            return "TYPE_CLIENT"
-        case 2:
-            return "TYPE_WORKER"
-    }
-    panic("Unknow ClientType " + strconv.Itoa(int(c)))
+	switch c {
+	case TYPECLIENT:
+		return "TYPECLIENT"
+	case TYPEWORKER:
+		return "TYPEWORKER"
+	}
+	panic("Unknow ClientType " + strconv.Itoa(int(c)))
 }

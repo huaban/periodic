@@ -1,3 +1,4 @@
 package periodic
 
-var Version = "0.1.6"
+// Version of periodic
+var Version = "0.1.7"
